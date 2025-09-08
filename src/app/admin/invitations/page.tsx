@@ -7,14 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -137,21 +129,21 @@ export default function InvitationManagement() {
     },
   ];
 
-  React.useEffect(() => {
-    fetchInvitations();
-  }, []);
-
-  const fetchInvitations = async () => {
+  const fetchInvitations = React.useCallback(async () => {
     try {
       const response = await fetch("/api/invitations");
       if (response.ok) {
         const data = await response.json();
         setInvitations(data);
       }
-    } catch (error: unknown) {
+    } catch {
       console.error("Error fetching invitations:", error);
     }
-  };
+  }, [error]);
+
+  React.useEffect(() => {
+    fetchInvitations();
+  }, [fetchInvitations]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,7 +189,7 @@ export default function InvitationManagement() {
         setError(data.error || "Failed to create invitation");
         toast.error("Invitation creation failed");
       }
-    } catch (error: unknown) {
+    } catch {
       setError("Something went wrong");
       toast.error("Something went wrong");
     } finally {

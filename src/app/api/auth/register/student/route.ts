@@ -14,6 +14,13 @@ const studentRegistrationSchema = z.object({
   guardianPhone: z.string().min(10),
 });
 
+interface StudentData {
+  class: string;
+  section: string;
+  guardian: string;
+  guardianEmail: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -67,7 +74,7 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
     // Get student data from invitation
-    const studentData = invitation.studentData as any;
+    const studentData = invitation.studentData as unknown as StudentData;
 
     // Create user and student in transaction
     const result = await prisma.$transaction(async (tx) => {

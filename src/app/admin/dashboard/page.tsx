@@ -3,17 +3,8 @@
 "use client";
 
 import React from "react";
-import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { PaymentMethod, PaymentStatus, UserStatus } from "@prisma/client";
@@ -143,20 +134,20 @@ export default function AdminDashboard() {
       .reduce((total, payment) => total + Number(payment.amount), 0);
   };
 
-  const getStatusColor = (status: UserStatus) => {
-    switch (status) {
-      case "ACTIVE":
-        return "default";
-      case "PENDING":
-        return "secondary";
-      case "SUSPENDED":
-        return "destructive";
-      case "INACTIVE":
-        return "outline";
-      default:
-        return "default";
-    }
-  };
+  // const getStatusColor = (status: UserStatus) => {
+  //   switch (status) {
+  //     case "ACTIVE":
+  //       return "default";
+  //     case "PENDING":
+  //       return "secondary";
+  //     case "SUSPENDED":
+  //       return "destructive";
+  //     case "INACTIVE":
+  //       return "outline";
+  //     default:
+  //       return "default";
+  //   }
+  // };
 
   return (
     <AdminLayout>

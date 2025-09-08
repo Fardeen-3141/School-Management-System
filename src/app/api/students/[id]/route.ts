@@ -193,7 +193,10 @@ export async function PUT(
   }
 }
 
-export async function DELETE(context: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions);
 

@@ -2,19 +2,11 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -30,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import {
   Users,
@@ -144,7 +135,11 @@ export default function AdminAttendancePage() {
       accessorKey: "status",
       header: "Status",
       cell: (record) => (
-        <Badge variant={getStatusColor(record.status) as any}>
+        <Badge
+          variant={
+            getStatusColor(record.status) as ReturnType<typeof getStatusColor>
+          }
+        >
           {record.status}
         </Badge>
       ),
@@ -184,16 +179,7 @@ export default function AdminAttendancePage() {
     },
   ];
 
-  useEffect(() => {
-    fetchAttendance();
-    fetchStudents();
-  }, []);
-
-  useEffect(() => {
-    filterAttendance();
-  }, [attendance, selectedDate, classFilter, sectionFilter, statusFilter]);
-
-  const fetchAttendance = async () => {
+  const fetchAttendance = React.useCallback(async () => {
     try {
       const response = await fetch("/api/attendance");
       if (response.ok) {
@@ -202,20 +188,20 @@ export default function AdminAttendancePage() {
       } else {
         setError("Failed to fetch attendance");
       }
-    } catch (error) {
+    } catch {
       setError("Error fetching attendance");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchStudents = async () => {
+  const fetchStudents = React.useCallback(async () => {
     try {
       const response = await fetch("/api/students");
       if (response.ok) {
         const data = await response.json();
         setStudents(
-          data.map((student: any) => ({
+          data.map((student: Student) => ({
             id: student.id,
             name: student.name,
             rollNumber: student.rollNumber,
@@ -224,12 +210,12 @@ export default function AdminAttendancePage() {
           }))
         );
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching students:", error);
     }
-  };
+  }, []);
 
-  const filterAttendance = () => {
+  const filterAttendance = React.useCallback(() => {
     let filtered = attendance;
 
     // Date filter
@@ -259,7 +245,23 @@ export default function AdminAttendancePage() {
     }
 
     setFilteredAttendance(filtered);
-  };
+  }, [attendance, classFilter, sectionFilter, selectedDate, statusFilter]);
+
+  useEffect(() => {
+    fetchAttendance();
+    fetchStudents();
+  }, [fetchAttendance, fetchStudents]);
+
+  useEffect(() => {
+    filterAttendance();
+  }, [
+    attendance,
+    selectedDate,
+    classFilter,
+    sectionFilter,
+    statusFilter,
+    filterAttendance,
+  ]);
 
   const openBulkAttendanceDialog = () => {
     setSelectedClass("");
@@ -333,7 +335,7 @@ export default function AdminAttendancePage() {
       } else {
         setError(data.error || "Failed to record attendance");
       }
-    } catch (error) {
+    } catch {
       setError("Something went wrong");
     } finally {
       setBulkLoading(false);
@@ -364,7 +366,7 @@ export default function AdminAttendancePage() {
         const data = await response.json();
         setError(data.error || "Failed to update attendance");
       }
-    } catch (error) {
+    } catch {
       setError("Error updating attendance");
     }
   };

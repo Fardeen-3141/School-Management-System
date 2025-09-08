@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
     const classFilter = searchParams.get("class");
     const sectionFilter = searchParams.get("section");
 
-    let whereClause: any = {};
+    const whereClause: Prisma.AttendanceWhereInput = {};
 
     if (startDate && endDate) {
       whereClause.date = {
@@ -63,13 +64,22 @@ export async function GET(req: NextRequest) {
           : 0,
     };
 
+    type ClasswiseStats = {
+      [key: string]: {
+        present: number;
+        absent: number;
+        late: number;
+        total: number;
+      };
+    };
+
     // Class-wise breakdown
-    const classwiseStats = attendance.reduce((acc: any, record) => {
+    const classwiseStats = attendance.reduce<ClasswiseStats>((acc, record) => {
       const key = `${record.student.class}-${record.student.section}`;
       if (!acc[key]) {
         acc[key] = { present: 0, absent: 0, late: 0, total: 0 };
       }
-      acc[key][record.status.toLowerCase()]++;
+      acc[key][record.status.toLowerCase() as "present" | "absent" | "late"]++;
       acc[key].total++;
       return acc;
     }, {});

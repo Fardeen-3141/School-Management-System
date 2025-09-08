@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 const createFeeSchema = z.object({
   type: z.string().min(1),
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Find students in the target class
-      const whereClause: any = {
+      const whereClause: Prisma.StudentWhereInput = {
         class: validatedData.targetClass,
         user: {
           status: "ACTIVE", // Only create fees for active students

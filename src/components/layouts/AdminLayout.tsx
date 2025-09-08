@@ -82,7 +82,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   );
 
   // User section component
-  const UserSection = ({ mobile = false }: { mobile?: boolean }) => (
+  const UserSection = () => (
     <div className="border-t border-border p-4">
       <div className="flex items-center gap-3 mb-3">
         <Avatar className="h-8 w-8">
@@ -149,7 +149,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       {/* User section */}
-      <UserSection mobile={mobile} />
+      <UserSection />
     </div>
   );
 

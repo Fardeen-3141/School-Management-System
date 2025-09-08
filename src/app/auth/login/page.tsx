@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/card";
 import { DividerWithText } from "@/components/ui/special/DividerWithText";
 import Image from "next/image";
-import { toast } from "sonner";
 import { Eye, EyeOff, Mail } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
@@ -54,7 +53,7 @@ export default function LoginPage() {
       } else {
         setError("Invalid email or password");
       }
-    } catch (error) {
+    } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -67,7 +66,7 @@ export default function LoginPage() {
       await signIn("google", {
         callbackUrl: "/",
       });
-    } catch (error) {
+    } catch {
       setError("Google login failed");
     }
   };

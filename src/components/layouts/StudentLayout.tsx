@@ -96,7 +96,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
   );
 
   // User section component
-  const UserSection = ({ mobile = false }: { mobile?: boolean }) => (
+  const UserSection = () => (
     <div className="border-t border-border p-4">
       <div className="flex items-center gap-3 mb-3">
         <Avatar className="h-8 w-8">
@@ -197,7 +197,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
           mobile && sidebarOpen && "delay-200"
         )}
       >
-        <UserSection mobile={mobile} />
+        <UserSection/>
       </div>
     </div>
   );

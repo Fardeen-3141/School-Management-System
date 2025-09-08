@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 const createAttendanceSchema = z.object({
   studentId: z.string().min(1),
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     const classFilter = searchParams.get("classFilter");
     const sectionFilter = searchParams.get("sectionFilter");
 
-    let whereClause: any;
+    const whereClause: Prisma.AttendanceWhereInput = {};
 
     if (date) {
       const startDate = new Date(date);

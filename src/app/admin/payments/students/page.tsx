@@ -8,14 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   ResponsiveList,
   ColumnDef,
 } from "@/components/ui/special/ResponsiveList";
@@ -276,15 +268,7 @@ export default function AdminStudentsPage() {
     },
   ];
 
-  React.useEffect(() => {
-    fetchStudents();
-  }, []);
-
-  React.useEffect(() => {
-    filterStudents();
-  }, [students, searchQuery, classFilter, statusFilter]);
-
-  const fetchStudents = async () => {
+  const fetchStudents = React.useCallback(async () => {
     try {
       const response = await fetch("/api/students");
       if (response.ok) {
@@ -293,14 +277,14 @@ export default function AdminStudentsPage() {
       } else {
         setError("Failed to fetch students");
       }
-    } catch (error) {
+    } catch {
       setError("Error fetching students");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterStudents = () => {
+  const filterStudents = React.useCallback(() => {
     let filtered = students;
 
     // Search filter
@@ -331,7 +315,15 @@ export default function AdminStudentsPage() {
     }
 
     setFilteredStudents(filtered);
-  };
+  }, [classFilter, searchQuery, statusFilter, students]);
+
+  React.useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  React.useEffect(() => {
+    filterStudents();
+  }, [students, searchQuery, classFilter, statusFilter, filterStudents]);
 
   const resetForm = () => {
     setFormData({
@@ -415,7 +407,7 @@ export default function AdminStudentsPage() {
           data.error || `Failed to ${isEditing ? "update" : "create"} student`
         );
       }
-    } catch (error: unknown) {
+    } catch {
       setError("Something went wrong");
     } finally {
       setFormLoading(false);
@@ -444,7 +436,7 @@ export default function AdminStudentsPage() {
         const data = await response.json();
         setError(data.error || "Failed to delete student");
       }
-    } catch (error: unknown) {
+    } catch {
       setError("Error deleting student");
     }
   };
@@ -468,7 +460,7 @@ export default function AdminStudentsPage() {
         const data = await response.json();
         setError(data.error || "Failed to update status");
       }
-    } catch (error: unknown) {
+    } catch {
       setError("Error updating status");
     }
   };
