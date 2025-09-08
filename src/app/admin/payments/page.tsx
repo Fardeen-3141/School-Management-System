@@ -132,6 +132,7 @@ interface PaymentFormData {
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = React.useState<Payment[]>([]);
+  const [allFees, setAllFees] = React.useState<any[]>([]);
   const [students, setStudents] = React.useState<Student[]>([]);
   const [filteredPayments, setFilteredPayments] = React.useState<Payment[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -307,6 +308,7 @@ export default function AdminPaymentsPage() {
     try {
       const paymentsPromise = fetch("/api/payments");
       const studentsPromise = fetch("/api/students");
+      const feesPromise = fetch("/api/fees");
       let studentPromise = null;
 
       if (studentId) {
@@ -315,10 +317,8 @@ export default function AdminPaymentsPage() {
         setViewingStudent(null);
       }
 
-      const [paymentsResponse, studentsResponse] = await Promise.all([
-        paymentsPromise,
-        studentsPromise,
-      ]);
+      const [paymentsResponse, studentsResponse, feesResponse] =
+        await Promise.all([paymentsPromise, studentsPromise, feesPromise]);
 
       if (!paymentsResponse.ok || !studentsResponse.ok) {
         throw new Error("Failed to fetch initial data.");
@@ -326,6 +326,8 @@ export default function AdminPaymentsPage() {
 
       const paymentsData = await paymentsResponse.json();
       const studentsData = await studentsResponse.json();
+      const feesData = await feesResponse.json();
+
       setPayments(paymentsData);
       setStudents(
         studentsData.map((student: any) => ({
@@ -337,6 +339,7 @@ export default function AdminPaymentsPage() {
           fees: student.fees || [],
         }))
       );
+      setAllFees(feesData);
 
       if (studentPromise) {
         const studentResponse = await studentPromise;
@@ -437,6 +440,15 @@ export default function AdminPaymentsPage() {
 
   const openCreateDialog = () => {
     resetForm();
+
+    // If we are viewing a specific student, pre-fill the form with their ID.
+    if (viewingStudent) {
+      setFormData((prev) => ({
+        ...prev,
+        studentId: viewingStudent.id,
+      }));
+    }
+
     setIsDialogOpen(true);
   };
 
@@ -585,15 +597,43 @@ export default function AdminPaymentsPage() {
   };
 
   const calculateStats = () => {
-    const totalAmount = payments
+    // If viewing a student, use their filtered payments. Otherwise, use all payments.
+    const sourcePayments = viewingStudent ? filteredPayments : payments;
+
+    let sourceFees: any[];
+    if (viewingStudent) {
+      // The student object from the API contains their associated fees
+      sourceFees = viewingStudent.fees || [];
+    } else {
+      // In global view, use the full list of all fees
+      sourceFees = allFees;
+    }
+
+    const remainingDue = sourceFees
+      .map((fee) => {
+        // For each fee, find the total paid specifically for it.
+        const totalPaidForFee = (fee.payments || [])
+          .filter((p: any) => p.status === "COMPLETED")
+          .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+
+        // Calculate the balance for this single fee.
+        const balance = Number(fee.amount) - totalPaidForFee;
+
+        // Only count positive balances.
+        return balance > 0 ? balance : 0;
+      })
+      // 2. Sum up the balances of all fees that are not fully paid.
+      .reduce((total, balance) => total + balance, 0);
+
+    const totalCollected = sourcePayments
       .filter((p) => p.status === "COMPLETED")
       .reduce((sum, payment) => sum + Number(payment.amount), 0);
 
-    const pendingAmount = payments
+    const pendingAmount = sourcePayments
       .filter((p) => p.status === "PENDING")
       .reduce((sum, payment) => sum + Number(payment.amount), 0);
 
-    const todayAmount = payments
+    const todayAmount = sourcePayments
       .filter(
         (p) =>
           p.status === "COMPLETED" &&
@@ -601,11 +641,17 @@ export default function AdminPaymentsPage() {
       )
       .reduce((sum, payment) => sum + Number(payment.amount), 0);
 
-    const completedCount = payments.filter(
+    const completedCount = sourcePayments.filter(
       (p) => p.status === "COMPLETED"
     ).length;
 
-    return { totalAmount, pendingAmount, todayAmount, completedCount };
+    return {
+      totalCollected,
+      remainingDue,
+      pendingAmount,
+      todayAmount,
+      completedCount,
+    };
   };
 
   const stats = calculateStats();
@@ -698,14 +744,24 @@ export default function AdminPaymentsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Total Collected
+                Collection Status (Paid / Total Due)
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-green-600" />
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                ₹{stats.totalAmount.toLocaleString()}
+              <div className="text-2xl font-bold">
+                <span className="text-green-600">
+                  ₹{stats.totalCollected.toLocaleString()}
+                </span>
+                <span className="text-xl text-muted-foreground">
+                  {" "}
+                  / ₹
+                  {(stats.totalCollected + stats.remainingDue).toLocaleString()}
+                </span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                ₹{stats.remainingDue.toLocaleString()} remaining
+              </p>
             </CardContent>
           </Card>
           <Card>

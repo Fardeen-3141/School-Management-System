@@ -54,7 +54,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { addMonths, addYears, endOfMonth, format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -76,6 +76,7 @@ interface StudentFeeSetup {
   feeStructure: FeeStructure;
   customAmount: number | null;
   isActive: boolean;
+  lastGeneratedFor: string | null;
 }
 
 // This helper object will be useful for displaying human-readable labels
@@ -653,6 +654,37 @@ export default function AdminFeesPage() {
     return { totalFees, totalPaid, totalPending, overdueCount };
   };
 
+  const calculateNextDueDate = (setup: StudentFeeSetup): string => {
+    // If the rule is inactive or one-time, there's no next due date.
+    if (!setup.isActive) {
+      return "N/A";
+    }
+    if (setup.feeStructure.recurrence === "ONCE") {
+      return "One-Time Fee";
+    }
+
+    // The last date a fee was generated for this rule.
+    const lastDate = setup.lastGeneratedFor
+      ? new Date(setup.lastGeneratedFor)
+      : null;
+
+    let nextPeriod: Date;
+
+    if (setup.feeStructure.recurrence === "MONTHLY") {
+      // If it's never been generated, the next is for the current month.
+      // Otherwise, it's for the month after the last generation.
+      nextPeriod = lastDate ? addMonths(lastDate, 1) : new Date();
+    } else {
+      // YEARLY
+      nextPeriod = lastDate ? addYears(lastDate, 1) : new Date();
+    }
+
+    // The cron job sets the due date to the end of the month.
+    const nextDueDate = endOfMonth(nextPeriod);
+
+    return format(nextDueDate, "PPP"); // e.g., "Sep 30th, 2025"
+  };
+
   const stats = calculateStats();
   const uniqueTypes = Array.from(new Set(fees.map((f) => f.type))).sort();
   const uniqueClasses = Array.from(
@@ -699,119 +731,127 @@ export default function AdminFeesPage() {
         )}
 
         {/* Card for Managing Fee Rules */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle>Recurring Fee Rules</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Manage automated fee generation for this student.
-              </p>
-            </div>
-            <Button
-              className="cursor-pointer"
-              onClick={() => {
-                setIsEditingSetup(false);
-                setSetupFormData({ feeStructureId: "", customAmount: "" });
-                setIsSetupDialogOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" /> Apply New Rule
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fee Type</TableHead>
-                  <TableHead>Recurrence</TableHead>
-                  <TableHead>Standard Amount</TableHead>
-                  <TableHead>Custom Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {studentFeeSetups.length > 0 ? (
-                  studentFeeSetups.map((setup) => (
-                    <TableRow key={setup.id}>
-                      <TableCell className="font-medium">
-                        {setup.feeStructure.type}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {recurrenceLabel[setup.feeStructure.recurrence]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        ₹{Number(setup.feeStructure.amount).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        {setup.customAmount ? (
-                          `₹${Number(setup.customAmount).toLocaleString()}`
-                        ) : (
-                          <span className="text-muted-foreground">Default</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={setup.isActive}
-                            onCheckedChange={() =>
-                              handleToggleSetupActive(setup)
-                            }
+        {viewingStudent && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="space-y-1">
+                <CardTitle>Recurring Fee Rules</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Manage automated fee generation for this student.
+                </p>
+              </div>
+              <Button
+                className="cursor-pointer"
+                onClick={() => {
+                  setIsEditingSetup(false);
+                  setSetupFormData({ feeStructureId: "", customAmount: "" });
+                  setIsSetupDialogOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" /> Apply New Rule
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fee Type</TableHead>
+                    <TableHead>Recurrence</TableHead>
+                    <TableHead>Standard Amount</TableHead>
+                    <TableHead>Custom Amount</TableHead>
+                    <TableHead>Next Due Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {studentFeeSetups.length > 0 ? (
+                    studentFeeSetups.map((setup) => (
+                      <TableRow key={setup.id}>
+                        <TableCell className="font-medium">
+                          {setup.feeStructure.type}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {recurrenceLabel[setup.feeStructure.recurrence]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          ₹{Number(setup.feeStructure.amount).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          {setup.customAmount ? (
+                            `₹${Number(setup.customAmount).toLocaleString()}`
+                          ) : (
+                            <span className="text-muted-foreground">
+                              Default
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>{calculateNextDueDate(setup)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={setup.isActive}
+                              onCheckedChange={() =>
+                                handleToggleSetupActive(setup)
+                              }
+                              className="cursor-pointer"
+                            />
+                            <span
+                              className={
+                                setup.isActive
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }
+                            >
+                              {setup.isActive ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="cursor-pointer"
-                          />
-                          <span
-                            className={
-                              setup.isActive ? "text-green-600" : "text-red-600"
-                            }
+                            onClick={() => {
+                              setIsEditingSetup(true);
+                              setSelectedSetup(setup);
+                              setSetupFormData({
+                                feeStructureId: "", // Not needed for edit
+                                customAmount: String(setup.customAmount ?? ""),
+                              });
+                              setIsSetupDialogOpen(true);
+                            }}
                           >
-                            {setup.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="cursor-pointer"
-                          onClick={() => {
-                            setIsEditingSetup(true);
-                            setSelectedSetup(setup);
-                            setSetupFormData({
-                              feeStructureId: "", // Not needed for edit
-                              customAmount: String(setup.customAmount ?? ""),
-                            });
-                            setIsSetupDialogOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 cursor-pointer"
-                          onClick={() => handleRemoveSetup(setup)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 cursor-pointer"
+                            onClick={() => handleRemoveSetup(setup)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-center text-muted-foreground"
+                      >
+                        No recurring fee rules applied to this student.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="text-center text-muted-foreground"
-                    >
-                      No recurring fee rules applied to this student.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
         <h2 className="text-xl font-bold pt-4">Generated Fee Ledger</h2>
 
