@@ -13,11 +13,11 @@ const createStudentSchema = z.object({
   section: z.string().min(1),
   rollNumber: z.string().min(1),
   guardian: z.string().min(1),
-  guardianPhone: z.string().min(1).optional(),
+  guardianPhone: z.string().min(1),
   guardianEmail: z.email().optional(),
   address: z.string().optional(),
   dateOfBirth: z.string().optional(),
-  email: z.email().optional(),
+  email: z.email(),
   password: z.string().min(6).optional(), // Optional for admin-created students
 });
 

@@ -21,6 +21,7 @@ import {
   Mail,
   LogOut,
 } from "lucide-react";
+import Logo from "../ui/special/Logo";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -123,7 +124,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       )}
     >
       {/* Header */}
-      <div className="flex h-16 items-center gap-2 border-b border-border px-4">
+      <div className="flex h-20 items-center gap-2 border-b border-border px-2 md:px-4">
         <div className="flex items-center gap-2 font-semibold">
           <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
             <LayoutDashboard className="h-4 w-4 text-primary-foreground" />
@@ -171,7 +172,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex h-16 items-center gap-4 border-b border-border bg-card px-6">
+        <header className="flex h-20 items-center gap-4 border-b border-border bg-card px-6">
           <Button
             onClick={() => setSidebarOpen(true)}
             variant="outline"
@@ -183,9 +184,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </Button>
 
           <div className="flex-1">
-            <h1 className="text-lg font-semibold text-foreground">
-              School Fee Management System
-            </h1>
+            <Logo />
           </div>
 
           {/* Desktop user info */}
