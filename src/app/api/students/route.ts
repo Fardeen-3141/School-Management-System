@@ -17,7 +17,7 @@ const createStudentSchema = z.object({
   guardianEmail: z.string().email().optional(),
   address: z.string().optional(),
   dateOfBirth: z.string().optional(),
-  email: z.string().email(),
+  email: z.email().optional(),
   password: z.string().min(6).optional(), // Optional for admin-created students
 });
 
