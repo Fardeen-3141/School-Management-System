@@ -22,7 +22,7 @@ async function main() {
     },
   });
 
-  console.log("Super admin created:", superAdmin.email);
+  console.log("Super Admin created:", superAdmin.email);
 
   // Create a sample invitation for testing
   const invitation = await prisma.invitation.create({
