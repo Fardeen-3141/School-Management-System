@@ -7,10 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const updatePaymentSchema = z.object({
-  amount: z.number().positive(),
-  method: z.enum(["CASH", "CARD", "BANK_TRANSFER", "UPI"]),
-  status: z.enum(["PENDING", "COMPLETED", "FAILED"]),
-  date: z.string(),
+  date: z.string().optional(),
 });
 
 // GET single payment
@@ -71,23 +68,19 @@ export async function PUT(
     const body = await req.json();
     const validatedData = updatePaymentSchema.parse(body);
 
-    const { id } = await context.params;
-
-    // Check if payment exists
-    const existingPayment = await prisma.payment.findUnique({
-      where: { id },
-    });
-
-    if (!existingPayment) {
-      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+    // Ensure there's something to update
+    if (!validatedData.date) {
+      return NextResponse.json(
+        { error: "No valid fields to update. Only date can be edited." },
+        { status: 400 }
+      );
     }
+
+    const { id } = await context.params;
 
     const updatedPayment = await prisma.payment.update({
       where: { id },
       data: {
-        amount: validatedData.amount,
-        method: validatedData.method,
-        status: validatedData.status,
         date: new Date(validatedData.date),
       },
       include: {
@@ -98,6 +91,14 @@ export async function PUT(
             rollNumber: true,
             class: true,
             section: true,
+          },
+        },
+        fee: {
+          select: {
+            id: true,
+            type: true,
+            amount: true,
+            dueDate: true,
           },
         },
       },

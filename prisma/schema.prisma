@@ -158,15 +158,15 @@ model Fee {
 }
 
 model Payment {
-  id        String        @id @default(cuid())
+  id        String   @id @default(cuid())
   amount    Decimal
-  method    PaymentMethod
-  date      DateTime      @default(now())
-  status    PaymentStatus @default(PENDING)
+  date      DateTime @default(now())
   studentId String
   feeId     String?
-  student   Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  fee       Fee?           @relation(fields: [feeId], references: [id])
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fee       Fee?     @relation(fields: [feeId], references: [id])
+
+  type PaymentType @default(PAYMENT)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -203,17 +203,9 @@ enum UserStatus {
   INACTIVE
 }
 
-enum PaymentMethod {
-  CASH
-  CARD
-  BANK_TRANSFER
-  UPI
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
+enum PaymentType {
+  PAYMENT
+  DISCOUNT
 }
 
 enum AttendanceStatus {

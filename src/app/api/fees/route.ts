@@ -37,14 +37,7 @@ export async function GET() {
             section: true,
           },
         },
-        payments: {
-          select: {
-            id: true,
-            amount: true,
-            status: true,
-            date: true,
-          },
-        },
+        payments: true,
       },
       orderBy: {
         createdAt: "desc",

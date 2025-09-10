@@ -5,13 +5,13 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 const createPaymentSchema = z.object({
   studentId: z.string().min(1),
   feeId: z.string().optional(),
-  amount: z.number().positive(),
-  method: z.enum(["CASH", "CARD", "BANK_TRANSFER", "UPI"]),
-  status: z.enum(["PENDING", "COMPLETED", "FAILED"]),
+  amount: z.number().min(0).positive(),
+  discount: z.number().min(0).positive().optional(),
   date: z.string(),
 });
 
@@ -70,13 +70,29 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = createPaymentSchema.parse(body);
-    const { studentId, feeId, amount, method, status, date } = validatedData;
+    const { studentId, feeId, amount, discount = 0, date } = validatedData;
+
+    // A transaction must consist of either an amount or a discount.
+    if (amount <= 0 && discount <= 0) {
+      return NextResponse.json(
+        { error: "Payment amount and discount cannot both be zero." },
+        { status: 400 }
+      );
+    }
+
+    const totalCredit = amount + discount;
+    const paymentsToCreate: Prisma.PaymentCreateArgs[] = [];
 
     // --- SPECIFIC FEE PAYMENT ---
     if (feeId) {
       const fee = await prisma.fee.findFirst({
-        where: { id: feeId, studentId: studentId },
-        include: { payments: { where: { status: "COMPLETED" } } },
+        where: {
+          id: feeId,
+          studentId: studentId,
+        },
+        include: {
+          payments: true,
+        },
       });
 
       if (!fee) {
@@ -92,10 +108,10 @@ export async function POST(request: NextRequest) {
       );
       const remaining = Number(fee.amount) - totalPaid;
 
-      if (amount > remaining) {
+      if (totalCredit > remaining + 0.01) {
         return NextResponse.json(
           {
-            error: `Payment amount (₹${amount}) exceeds remaining fee amount (₹${remaining.toFixed(
+            error: `Total credit (₹${totalCredit}) exceeds remaining fee amount (₹${remaining.toFixed(
               2
             )})`,
           },
@@ -103,106 +119,130 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const payment = await prisma.payment.create({
-        data: {
-          studentId,
-          feeId,
-          amount,
-          method,
-          status,
-          date: new Date(date),
-        },
-      });
-
-      return NextResponse.json(payment, { status: 201 });
+      if (amount > 0) {
+        paymentsToCreate.push({
+          data: {
+            studentId,
+            feeId,
+            amount,
+            date: new Date(date),
+            type: "PAYMENT" as const,
+          },
+        });
+      }
+      if (discount > 0) {
+        paymentsToCreate.push({
+          data: {
+            studentId,
+            feeId,
+            amount: discount,
+            date: new Date(date),
+            type: "DISCOUNT" as const,
+          },
+        });
+      }
     }
 
     // --- GENERAL PAYMENT ALLOCATION ---
-    let amountToAllocate = amount;
+    else {
+      const allFeesForStudent = await prisma.fee.findMany({
+        where: { studentId: studentId },
+        include: { payments: true },
+        orderBy: { dueDate: "asc" },
+      });
 
-    // 1. Fetch all fees for the student that are not fully paid, oldest first.
-    const allFeesForStudent = await prisma.fee.findMany({
-      where: {
-        studentId: studentId,
-      },
-      include: {
-        payments: {
-          where: {
-            status: "COMPLETED",
-          },
-        },
-      },
-      orderBy: {
-        dueDate: "asc", // Oldest debts first
-      },
-    });
-
-    const feesWithBalances = allFeesForStudent
-      .map((fee) => {
-        const totalPaid = fee.payments.reduce(
-          (sum, p) => sum + Number(p.amount),
-          0
-        );
-
-        return {
-          ...fee,
-          balance: Number(fee.amount) - totalPaid,
-        };
-      })
-      .filter((fee) => fee.balance > 0.01); // Filter out fully paid fees
-
-    const totalOutstandingBalance = feesWithBalances.reduce(
-      (sum, fee) => sum + fee.balance,
-      0
-    );
-
-    // Perform the critical overpayment check with the correct balance.
-    if (amount > totalOutstandingBalance + 0.01) {
-      return NextResponse.json(
-        {
-          error: `Payment amount (₹${amount}) exceeds total outstanding balance (₹${totalOutstandingBalance.toFixed(
-            2
-          )})`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Allocating the payment to different fees
-    const paymentCreationPromises = [];
-
-    for (const fee of feesWithBalances) {
-      if (amountToAllocate <= 0) break;
-
-      const amountToApply = Math.min(amountToAllocate, fee.balance);
-
-      paymentCreationPromises.push(
-        prisma.payment.create({
-          data: {
-            studentId,
-            feeId: fee.id,
-            amount: amountToApply,
-            method,
-            status,
-            date: new Date(date),
-          },
+      const feesWithBalances = allFeesForStudent
+        .map((fee) => {
+          const totalPaid = fee.payments.reduce(
+            (sum, p) => sum + Number(p.amount),
+            0
+          );
+          return { ...fee, balance: Number(fee.amount) - totalPaid };
         })
+        .filter((fee) => fee.balance > 0.01);
+
+      const totalOutstandingBalance = feesWithBalances.reduce(
+        (sum, fee) => sum + fee.balance,
+        0
       );
 
-      amountToAllocate -= amountToApply;
+      if (totalCredit > totalOutstandingBalance + 0.01) {
+        return NextResponse.json(
+          {
+            error: `Total credit (₹${totalCredit}) exceeds total outstanding balance (₹${totalOutstandingBalance.toFixed(
+              2
+            )})`,
+          },
+          { status: 400 }
+        );
+      }
+
+      let amountToAllocate = amount;
+      let discountToAllocate = discount;
+
+      for (const fee of feesWithBalances) {
+        if (amountToAllocate <= 0 && discountToAllocate <= 0) break;
+
+        let creditForThisFee = 0;
+
+        // Allocate discount first
+        if (discountToAllocate > 0) {
+          const discountApplied = Math.min(discountToAllocate, fee.balance);
+          if (discountApplied > 0) {
+            paymentsToCreate.push({
+              data: {
+                studentId,
+                feeId: fee.id,
+                amount: discountApplied,
+                date: new Date(date),
+                type: "DISCOUNT" as const,
+              },
+            });
+            creditForThisFee += discountApplied;
+            discountToAllocate -= discountApplied;
+          }
+        }
+
+        // Allocate actual payment
+        if (amountToAllocate > 0) {
+          const remainingBalanceOnFee = fee.balance - creditForThisFee;
+          if (remainingBalanceOnFee > 0) {
+            const amountApplied = Math.min(
+              amountToAllocate,
+              remainingBalanceOnFee
+            );
+            if (amountApplied > 0) {
+              paymentsToCreate.push({
+                data: {
+                  studentId,
+                  feeId: fee.id,
+                  amount: amountApplied,
+                  date: new Date(date),
+                  type: "PAYMENT" as const,
+                },
+              });
+              amountToAllocate -= amountApplied;
+            }
+          }
+        }
+      }
     }
 
-    if (paymentCreationPromises.length === 0) {
-      return NextResponse.json({ message: "No outstanding fees to pay." });
+    if (paymentsToCreate.length === 0) {
+      return NextResponse.json({
+        message:
+          "No payment or discount was recorded. The student may have no outstanding balance.",
+      });
     }
 
-    // Execute all payment creations in a single transaction
-    const createdPayments = await prisma.$transaction(paymentCreationPromises);
+    const createdRecords = await prisma.$transaction(
+      paymentsToCreate.map((p) => prisma.payment.create(p))
+    );
 
     return NextResponse.json(
       {
-        message: `Successfully allocated payment to ${createdPayments.length} fee(s).`,
-        payments: createdPayments,
+        message: `Successfully recorded ${createdRecords.length} transaction(s).`,
+        records: createdRecords,
       },
       { status: 201 }
     );

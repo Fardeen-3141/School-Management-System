@@ -46,16 +46,17 @@ import {
   MoreVertical,
   Search,
   DollarSign,
-  CalendarIcon,
+  CreditCard,
+  X,
+  AlertCircle,
+  GraduationCap,
+  Users,
+  Book,
+  SquareStack,
+  User,
+  Clock,
 } from "lucide-react";
-import { PaymentStatus } from "@prisma/client";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { addMonths, addYears, endOfMonth, format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
@@ -63,6 +64,7 @@ import {
   ColumnDef,
   ResponsiveList,
 } from "@/components/ui/special/ResponsiveList";
+import { DatePicker } from "@/components/ui/special/DatePicker";
 
 interface FeeStructure {
   id: string;
@@ -102,7 +104,7 @@ interface Fee {
   payments: Array<{
     id: string;
     amount: number;
-    status: PaymentStatus;
+    type: "PAYMENT" | "DISCOUNT";
     date: string;
   }>;
 }
@@ -212,33 +214,31 @@ export default function AdminFeesPageClient() {
       accessorKey: "amount",
       header: "Amount",
       cell: (fee) => `₹${Number(fee.amount).toLocaleString()}`,
-      className: "w-[100px]",
     },
     {
       accessorKey: "paid",
       header: "Paid",
       cell: (fee) => {
-        const totalPaid = fee.payments
-          .filter((p) => p.status === "COMPLETED")
-          .reduce((sum, p) => sum + Number(p.amount), 0);
+        // CORRECTED LOGIC: Sums all payments and discounts together.
+        const totalPaid = fee.payments.reduce(
+          (sum, p) => sum + Number(p.amount),
+          0
+        );
         return `₹${totalPaid.toLocaleString()}`;
       },
-      className: "w-[100px]",
     },
     {
       accessorKey: "status",
       header: "Status",
       cell: (fee) => {
+        // This now works correctly because we updated getFeeStatus!
         const feeStatus = getFeeStatus(fee);
         return (
-          <Badge
-            variant={feeStatus.color as "destructive" | "default" | "secondary"}
-          >
+          <Badge variant={feeStatus.color}>
             {feeStatus.status.toUpperCase()}
           </Badge>
         );
       },
-      className: "w-[100px]",
     },
     {
       accessorKey: "actions",
@@ -253,7 +253,6 @@ export default function AdminFeesPageClient() {
             >
               <span className="hidden sm:inline mr-2">Actions</span>
               <MoreVertical className="h-4 w-4 sm:hidden" />
-              <span className="sm:hidden ml-1 text-xs">Menu</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -274,7 +273,6 @@ export default function AdminFeesPageClient() {
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-      className: "w-[100px]",
     },
   ];
 
@@ -340,13 +338,16 @@ export default function AdminFeesPageClient() {
   const filterFees = React.useCallback(() => {
     let filtered = fees;
 
-    // If viewing a single student, filter by their ID first.
+    // This part is fine
     if (viewingStudent) {
-      filtered = filtered.filter((fee) => fee.student.id === viewingStudent.id);
+      // This view doesn't use the main table, so we just show all fees for the student
+      setFilteredFees(filtered);
+      return;
     }
 
-    // Search filter
-    // Only apply search if not in student view
+    // --- LOGIC FOR THE GLOBAL VIEW ---
+
+    // Search filter (this is fine)
     if (searchQuery && !viewingStudent) {
       filtered = filtered.filter(
         (fee) =>
@@ -358,31 +359,25 @@ export default function AdminFeesPageClient() {
       );
     }
 
-    // Status filter
-    if (statusFilter !== " all") {
+    // --- CORRECTED STATUS FILTER LOGIC ---
+    if (statusFilter !== "all") {
       filtered = filtered.filter((fee) => {
-        const totalPaid = fee.payments
-          .filter((p) => p.status === "COMPLETED")
-          .reduce((sum, p) => sum + Number(p.amount), 0);
+        // Use our already-corrected helper function!
+        const currentStatus = getFeeStatus(fee).status; // This returns 'PAID', 'PENDING', or 'OVERDUE'
 
-        if (statusFilter === "paid") return totalPaid >= Number(fee.amount);
-        if (statusFilter === "pending") return totalPaid < Number(fee.amount);
-        if (statusFilter === "overdue") {
-          return (
-            totalPaid < Number(fee.amount) && new Date(fee.dueDate) < new Date()
-          );
-        }
-        return true;
+        // The filter dropdown sends 'paid', 'pending', 'overdue'.
+        // We match them (case-insensitively).
+        return currentStatus.toLowerCase() === statusFilter;
       });
     }
 
-    // Type filter
+    // Type filter (this is fine)
     if (typeFilter !== "all") {
       filtered = filtered.filter((fee) => fee.type === typeFilter);
     }
 
     setFilteredFees(filtered);
-  }, [fees, searchQuery, statusFilter, typeFilter, viewingStudent]);
+  }, [fees, searchQuery, statusFilter, typeFilter, viewingStudent]); // Dependencies
 
   React.useEffect(() => {
     fetchData();
@@ -619,44 +614,64 @@ export default function AdminFeesPageClient() {
   };
 
   const getFeeStatus = (fee: Fee) => {
-    const totalPaid = fee.payments
-      .filter((p) => p.status === "COMPLETED")
-      .reduce((sum, p) => sum + Number(p.amount), 0);
+    // 1. Calculate the total credited amount (includes PAYMENTS and DISCOUNTS)
+    const totalCredited = fee.payments.reduce(
+      (sum, p) => sum + Number(p.amount),
+      0
+    );
+
+    const balance = Number(fee.amount) - totalCredited;
+
+    // 2. Determine status based on the balance
+    if (balance <= 0) {
+      return { status: "PAID", color: "default" as const };
+    }
 
     const isOverdue = new Date(fee.dueDate) < new Date();
+    if (isOverdue) {
+      return { status: "OVERDUE", color: "destructive" as const };
+    }
 
-    if (totalPaid >= Number(fee.amount))
-      return { status: "paid", color: "default" };
-
-    if (isOverdue) return { status: "overdue", color: "destructive" };
-    return { status: "pending", color: "secondary" };
+    return { status: "PENDING", color: "secondary" as const };
   };
 
   const calculateStats = () => {
-    // Use filteredFees for stats when viewing a student, otherwise use all fees
     const sourceData = viewingStudent ? filteredFees : fees;
 
     const totalFees = sourceData.reduce(
       (sum, fee) => sum + Number(fee.amount),
       0
     );
-    const totalPaid = sourceData.reduce((sum, fee) => {
-      const paid = fee.payments
-        .filter((p) => p.status === "COMPLETED")
-        .reduce((paidSum, p) => paidSum + Number(p.amount), 0);
-      return sum + paid;
-    }, 0);
-    const totalPending = totalFees - totalPaid;
+
+    let totalCollected = 0;
+    let totalDiscounted = 0;
+
+    // Iterate through all fees to sum up their associated payments and discounts
+    sourceData.forEach((fee) => {
+      (fee.payments || []).forEach((p) => {
+        if (p.type === "PAYMENT") {
+          totalCollected += Number(p.amount);
+        } else if (p.type === "DISCOUNT") {
+          totalDiscounted += Number(p.amount);
+        }
+      });
+    });
+
+    const totalCredited = totalCollected + totalDiscounted;
+    const totalPending = totalFees - totalCredited;
+
     const overdueCount = sourceData.filter((fee) => {
-      const totalPaid = fee.payments
-        .filter((p) => p.status === "COMPLETED")
-        .reduce((sum, p) => sum + Number(p.amount), 0);
-      return (
-        totalPaid < Number(fee.amount) && new Date(fee.dueDate) < new Date()
-      );
+      const feeStatus = getFeeStatus(fee);
+      return feeStatus.status === "OVERDUE";
     }).length;
 
-    return { totalFees, totalPaid, totalPending, overdueCount };
+    return {
+      totalFees,
+      totalCollected,
+      totalDiscounted,
+      totalPending,
+      overdueCount,
+    };
   };
 
   const calculateNextDueDate = (setup: StudentFeeSetup): string => {
@@ -895,48 +910,93 @@ export default function AdminFeesPageClient() {
         )}
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Fees Generated */}
+          <Card className="overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Fees</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Fees Generated
+              </CardTitle>
+              <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
+                <DollarSign className="h-4 w-4 text-blue-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-foreground mb-2">
                 ₹{stats.totalFees.toLocaleString()}
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Collected</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                ₹{stats.totalPaid.toLocaleString()}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Total value created
+                </span>
+                <span className="text-xs text-blue-600 font-medium">100%</span>
               </div>
             </CardContent>
           </Card>
-          <Card>
+
+          {/* Collections */}
+          <Card className="overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <DollarSign className="h-4 w-4 text-yellow-600" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Collections
+              </CardTitle>
+              <div className="h-8 w-8 rounded-full bg-green-50 flex items-center justify-center">
+                <DollarSign className="h-4 w-4 text-green-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
+              <div className="text-2xl font-bold text-green-600 mb-2">
+                ₹{stats.totalCollected.toLocaleString()}
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Discounts</span>
+                <span className="font-medium text-purple-600">
+                  ₹{stats.totalDiscounted.toLocaleString()}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Pending */}
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Pending
+              </CardTitle>
+              <div className="h-8 w-8 rounded-full bg-orange-50 flex items-center justify-center">
+                <Clock className="h-4 w-4 text-orange-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600 mb-2">
                 ₹{stats.totalPending.toLocaleString()}
               </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Outstanding</span>
+                <span className="text-xs font-medium text-orange-600">
+                  {((stats.totalPending / stats.totalFees) * 100).toFixed(1)}%
+                </span>
+              </div>
             </CardContent>
           </Card>
-          <Card>
+
+          {/* Overdue Fees */}
+          <Card className="overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-              <CalendarIcon className="h-4 w-4 text-red-600" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Overdue Fees
+              </CardTitle>
+              <div className="h-8 w-8 rounded-full bg-red-50 flex items-center justify-center">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {stats.overdueCount}
+              <div className="text-2xl font-bold text-red-600 mb-2">
+                {stats.overdueCount.toLocaleString()}
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Past due date</span>
+                <span className="text-xs font-medium text-red-600">Urgent</span>
               </div>
             </CardContent>
           </Card>
@@ -1022,207 +1082,326 @@ export default function AdminFeesPageClient() {
 
         {/* Add/Edit Fee Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {isEditing ? "Edit Fee" : "Create New Fee"}
-              </DialogTitle>
-            </DialogHeader>
+          <DialogContent className="max-w-xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
+              <DialogHeader className="space-y-0">
+                <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                  <CreditCard className="h-5 w-5 text-blue-600" />
+                  {isEditing ? "Edit Fee" : "Create New Fee"}
+                </DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  {isEditing
+                    ? "Update fee details"
+                    : "Add a new fee for student(s)"}
+                </p>
+              </DialogHeader>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsDialogOpen(false)}
+                className="h-8 w-8 p-0 hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="space-y-1">
-                <Label htmlFor="type">Fee Type *</Label>
-                <Input
-                  id="type"
-                  value={formData.type}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, type: e.target.value }))
-                  }
-                  placeholder="e.g., Tuition Fee, Library Fee, Lab Fee"
-                  required
-                />
-              </div>
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-6">
+              {/* Error Alert */}
+              {error && (
+                <Alert className="mb-4 border-red-200 bg-red-50">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-700">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
 
-              <div className="space-y-1">
-                <Label htmlFor="amount">Amount (₹) *</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, amount: e.target.value }))
-                  }
-                  required
-                />
-              </div>
+              <div className="space-y-6 pb-6">
+                {/* Fee Type */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="type"
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                  >
+                    <CreditCard className="h-4 w-4 text-gray-500" />
+                    Fee Type *
+                  </Label>
+                  <Input
+                    id="type"
+                    value={formData.type}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, type: e.target.value }))
+                    }
+                    placeholder="e.g., Tuition Fee, Library Fee, Lab Fee"
+                    className="h-11"
+                    required
+                  />
+                </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="dueDate">Due Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-between text-left font-normal cursor-pointer"
-                    >
-                      {formData.dueDate ? (
-                        format(new Date(formData.dueDate), "PPP")
-                      ) : (
-                        <span>Select date</span>
-                      )}
-                      <CalendarIcon className="ml-2 h-4 w-4 text-gray-400" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={
-                        formData.dueDate
-                          ? new Date(formData.dueDate)
-                          : undefined
-                      }
-                      onSelect={(date) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          dueDate: date ? date.toISOString().split("T")[0] : "",
-                        }))
-                      }
-                      autoFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {!isEditing && (
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="applyToClass"
-                      checked={formData.applyToClass}
+                {/* Amount */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="amount"
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                  >
+                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    Amount *
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      ₹
+                    </span>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.amount}
                       onChange={(e) =>
                         setFormData((prev) => ({
                           ...prev,
-                          applyToClass: e.target.checked,
+                          amount: e.target.value,
                         }))
                       }
-                      className="rounded cursor-pointer"
+                      placeholder="0.00"
+                      className="h-11 pl-8 text-right"
+                      required
                     />
-                    <Label htmlFor="applyToClass">Apply to entire class</Label>
                   </div>
+                </div>
 
-                  {formData.applyToClass ? (
-                    <div className="space-y-8">
-                      <div className="space-y-1">
-                        <Label htmlFor="targetClass">Class *</Label>
+                {/* Due Date */}
+                <div className="space-y-2">
+                  <DatePicker
+                    value={formData.dueDate}
+                    onChange={(date) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        dueDate: date || "",
+                      }))
+                    }
+                    label="Due Date"
+                    placeholder="Select due date"
+                    required={true}
+                    minDate={new Date().toISOString().split("T")[0]} // Prevent past dates for due dates
+                  />
+                </div>
+
+                {!isEditing && (
+                  <div className="space-y-4">
+                    {/* Apply To Class Toggle */}
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="applyToClass"
+                          checked={formData.applyToClass}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              applyToClass: e.target.checked,
+                            }))
+                          }
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <Label
+                          htmlFor="applyToClass"
+                          className="flex items-center gap-2 text-sm font-medium text-gray-900 cursor-pointer"
+                        >
+                          <Users className="h-4 w-4 text-gray-500" />
+                          Apply to entire class
+                        </Label>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2 ml-7">
+                        Check this to apply the fee to all students in a
+                        specific class/section
+                      </p>
+                    </div>
+
+                    {formData.applyToClass ? (
+                      <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <GraduationCap className="h-4 w-4 text-blue-600" />
+                          <h4 className="text-sm font-medium text-gray-900">
+                            Class Selection
+                          </h4>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="targetClass"
+                              className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                            >
+                              <Book className="h-4 w-4 text-gray-500" />
+                              Class *
+                            </Label>
+                            <Select
+                              value={formData.targetClass}
+                              onValueChange={(value) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  targetClass: value,
+                                }))
+                              }
+                            >
+                              <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
+                                <SelectValue placeholder="Select class" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {uniqueClasses.map((cls) => (
+                                  <SelectItem
+                                    key={cls}
+                                    value={cls}
+                                    className="cursor-pointer py-2"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Book className="h-4 w-4 text-gray-500" />
+                                      Class {cls}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="targetSection"
+                              className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                            >
+                              <SquareStack className="h-4 w-4 text-gray-500" />
+                              Section{" "}
+                              <span className="text-gray-400 font-normal">
+                                (Optional)
+                              </span>
+                            </Label>
+                            <Input
+                              id="targetSection"
+                              value={formData.targetSection}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  targetSection: e.target.value,
+                                }))
+                              }
+                              placeholder="Leave empty for all sections"
+                              className="h-11"
+                            />
+                            <p className="text-xs text-gray-500">
+                              Specify a section (A, B, C) or leave empty to
+                              apply to all sections
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="studentId"
+                          className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        >
+                          <User className="h-4 w-4 text-gray-500" />
+                          Student *
+                        </Label>
                         <Select
-                          value={formData.targetClass}
+                          value={formData.studentId}
                           onValueChange={(value) =>
                             setFormData((prev) => ({
                               ...prev,
-                              targetClass: value,
+                              studentId: value,
                             }))
                           }
+                          disabled={!!viewingStudent || formData.applyToClass}
                         >
-                          <SelectTrigger className="cursor-pointer">
-                            <SelectValue placeholder="Select class" />
+                          <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
+                            <SelectValue placeholder="Select student" />
                           </SelectTrigger>
                           <SelectContent>
-                            {uniqueClasses.map((cls) => (
+                            {students.map((student) => (
                               <SelectItem
-                                key={cls}
-                                value={cls}
-                                className="cursor-pointer"
+                                key={student.id}
+                                value={student.id}
+                                className="cursor-pointer py-3"
                               >
-                                {cls}
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {student.name}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    Roll: {student.rollNumber} • Class:{" "}
+                                    {student.class}-{student.section}
+                                  </span>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
+                    )}
+                  </div>
+                )}
 
-                      <div className="space-y-1">
-                        <Label htmlFor="targetSection">
-                          Section (Optional)
-                        </Label>
-                        <Input
-                          id="targetSection"
-                          value={formData.targetSection}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              targetSection: e.target.value,
-                            }))
-                          }
-                          placeholder="Leave empty for all sections"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <Label htmlFor="studentId">Student *</Label>
-                      <Select
-                        value={formData.studentId}
-                        onValueChange={(value) =>
-                          setFormData((prev) => ({ ...prev, studentId: value }))
-                        }
-                        disabled={!!viewingStudent || formData.applyToClass}
-                      >
-                        <SelectTrigger className="cursor-pointer">
-                          <SelectValue placeholder="Select student" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {students.map((student) => (
-                            <SelectItem
-                              key={student.id}
-                              value={student.id}
-                              className="cursor-pointer"
-                            >
-                              {student.name} - {student.rollNumber} (
-                              {student.class}-{student.section})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-              )}
+                {isEditing && (
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="studentIdEdit"
+                      className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                    >
+                      <User className="h-4 w-4 text-gray-500" />
+                      Student
+                    </Label>
+                    <Input
+                      value={`${selectedFee?.student.name} - ${selectedFee?.student.rollNumber}`}
+                      disabled
+                      className="h-11 bg-gray-100 text-gray-600"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Student cannot be changed when editing a fee
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
 
-              {isEditing && (
-                <div>
-                  <Label htmlFor="studentIdEdit">Student</Label>
-                  <Input
-                    value={`${selectedFee?.student.name} - ${selectedFee?.student.rollNumber}`}
-                    disabled
-                    className="bg-gray-100"
-                  />
-                </div>
-              )}
-
-              <div className="flex space-x-4 pt-4">
-                <Button
-                  type="submit"
-                  disabled={formLoading}
-                  className="cursor-pointer"
-                >
-                  {formLoading
-                    ? "Saving..."
-                    : isEditing
-                    ? "Update Fee"
-                    : "Create Fee"}
-                </Button>
+            {/* Fixed Footer */}
+            <div className="border-t border-gray-100 p-6 pt-4 bg-gray-50">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
-                  className="cursor-pointer"
+                  className="h-11 px-6"
+                  disabled={formLoading}
                 >
                   Cancel
                 </Button>
+                <Button
+                  type="submit"
+                  onClick={handleSubmit}
+                  disabled={
+                    formLoading ||
+                    !formData.type ||
+                    !formData.amount ||
+                    !formData.dueDate
+                  }
+                  className="h-11 px-6 bg-blue-600 hover:bg-blue-700"
+                >
+                  {formLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Saving...
+                    </div>
+                  ) : isEditing ? (
+                    "Update Fee"
+                  ) : (
+                    "Create Fee"
+                  )}
+                </Button>
               </div>
-            </form>
+            </div>
           </DialogContent>
         </Dialog>
 

@@ -33,16 +33,10 @@ import {
   CalendarIcon,
 } from "lucide-react";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import {
   ColumnDef,
   ResponsiveList,
 } from "@/components/ui/special/ResponsiveList";
+import { DatePicker } from "@/components/ui/special/DatePicker";
 
 interface AttendanceRecord {
   id: string;
@@ -719,30 +713,13 @@ export default function AdminAttendancePage() {
                 </div>
 
                 <div className="min-w-0 sm:col-span-2 lg:col-span-1">
-                  <Label htmlFor="dateOfBirth">Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between text-left font-normal cursor-pointer"
-                      >
-                        <span className="truncate">
-                          {bulkDate
-                            ? format(new Date(bulkDate), "PPP")
-                            : "Select date"}
-                        </span>
-                        <CalendarIcon className="ml-2 h-4 w-4 text-gray-400 flex-shrink-0" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={bulkDate ? new Date(bulkDate) : undefined}
-                        onSelect={() => setBulkDate(bulkDate)}
-                        autoFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <DatePicker
+                    value={bulkDate}
+                    onChange={(date) => setBulkDate(date || "")}
+                    label="Date"
+                    placeholder="Select date"
+                    className="w-full"
+                  />
                 </div>
               </div>
 

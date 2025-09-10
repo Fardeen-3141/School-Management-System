@@ -22,45 +22,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import {
-  Edit,
   Trash2,
   Plus,
-  MoreVertical,
   Search,
   DollarSign,
   CreditCard,
   CheckCircle,
   Clock,
-  CalendarIcon,
+  X,
+  AlertCircle,
+  User,
 } from "lucide-react";
-import { PaymentMethod, PaymentStatus } from "@prisma/client";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ColumnDef,
   ResponsiveList,
 } from "@/components/ui/special/ResponsiveList";
+import { PaymentType } from "@prisma/client";
+import { DatePicker } from "@/components/ui/special/DatePicker";
 
 interface Payment {
   id: string;
   amount: number;
-  method: PaymentMethod;
-  status: PaymentStatus;
+  type: PaymentType;
   date: string;
   createdAt: string;
   student: {
@@ -117,8 +104,7 @@ interface PaymentFormData {
   studentId: string;
   feeId: string;
   amount: string;
-  method: PaymentMethod;
-  status: PaymentStatus;
+  discount: string;
   date: string;
 }
 
@@ -138,7 +124,7 @@ interface Fee {
   payments: Array<{
     id: string;
     amount: number;
-    status: PaymentStatus;
+    discount: string;
     date: string;
   }>;
 }
@@ -168,16 +154,13 @@ export default function AdminPaymentsPageClient() {
 
   // Filter state
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState("all");
-  const [methodFilter, setMethodFilter] = React.useState("all");
   const [dateFilter, setDateFilter] = React.useState("all");
 
   const [formData, setFormData] = React.useState<PaymentFormData>({
     studentId: "",
     feeId: "",
     amount: "",
-    method: "CASH",
-    status: "COMPLETED",
+    discount: "",
     date: new Date().toISOString().split("T")[0],
   });
 
@@ -194,7 +177,7 @@ export default function AdminPaymentsPageClient() {
             <div>
               <div className="font-medium">{payment.student.name}</div>
               <div className="text-sm text-muted-foreground">
-                {payment.student.rollNumber} - {payment.student.class}
+                {payment.student.rollNumber} - {payment.student.class}-
                 {payment.student.section}
               </div>
             </div>
@@ -203,7 +186,7 @@ export default function AdminPaymentsPageClient() {
           <div>
             <div className="font-medium">{payment.student.name}</div>
             <div className="text-sm text-muted-foreground">
-              {payment.student.rollNumber} - {payment.student.class}
+              {payment.student.rollNumber} - {payment.student.class}-
               {payment.student.section}
             </div>
           </div>
@@ -212,7 +195,21 @@ export default function AdminPaymentsPageClient() {
     {
       accessorKey: "feeType",
       header: "Fee Type",
-      cell: (payment) => <span>{payment.fee?.type || "General Payment"}</span>,
+      cell: (payment) => <span>{payment.fee?.type || "General"}</span>,
+    },
+    {
+      accessorKey: "type",
+      header: "Type",
+      cell: ({ type }) => (
+        <Badge
+          variant={type === "DISCOUNT" ? "secondary" : "default"}
+          className={
+            type === "DISCOUNT" ? "border-purple-600/50 text-purple-700" : ""
+          }
+        >
+          {type}
+        </Badge>
+      ),
     },
     {
       accessorKey: "amount",
@@ -222,18 +219,6 @@ export default function AdminPaymentsPageClient() {
           ₹{Number(payment.amount).toLocaleString()}
         </span>
       ),
-      className: "w-[100px]",
-    },
-    {
-      accessorKey: "method",
-      header: "Method",
-      hideOnMobile: true,
-      cell: (payment) => (
-        <div className="flex items-center gap-2">
-          <span>{getMethodIcon(payment.method)}</span>
-          {payment.method.replace("_", " ")}
-        </div>
-      ),
     },
     {
       accessorKey: "date",
@@ -241,66 +226,20 @@ export default function AdminPaymentsPageClient() {
       cell: (payment) => (
         <span>{new Date(payment.date).toLocaleDateString()}</span>
       ),
-      className: "w-[110px]",
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: (payment) => (
-        <Badge
-          variant={
-            getStatusColor(payment.status) as ReturnType<typeof getStatusColor>
-          }
-        >
-          {payment.status}
-        </Badge>
-      ),
-      className: "w-[100px]",
     },
     {
       accessorKey: "actions",
       header: "Actions",
       cell: (payment) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="cursor-pointer h-9 px-3"
-            >
-              <span className="hidden sm:inline mr-2">Actions</span>
-              <MoreVertical className="h-4 w-4 sm:hidden" />
-              <span className="sm:hidden ml-1 text-xs">Menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => openEditDialog(payment)}
-              className="cursor-pointer"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Payment
-            </DropdownMenuItem>
-            {payment.status === "PENDING" && (
-              <DropdownMenuItem
-                onClick={() => handleStatusChange(payment.id, "COMPLETED")}
-                className="cursor-pointer"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Mark Completed
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              onClick={() => handleDelete(payment.id)}
-              className="text-red-600 cursor-pointer"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Payment
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer"
+          onClick={() => handleDelete(payment.id)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       ),
-      className: "w-[100px]",
     },
   ];
 
@@ -388,16 +327,6 @@ export default function AdminPaymentsPageClient() {
       );
     }
 
-    // Status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((payment) => payment.status === statusFilter);
-    }
-
-    // Method filter
-    if (methodFilter !== "all") {
-      filtered = filtered.filter((payment) => payment.method === methodFilter);
-    }
-
     // Date filter
     if (dateFilter !== "all") {
       const today = new Date();
@@ -428,14 +357,7 @@ export default function AdminPaymentsPageClient() {
     }
 
     setFilteredPayments(filtered);
-  }, [
-    dateFilter,
-    methodFilter,
-    payments,
-    searchQuery,
-    statusFilter,
-    viewingStudent,
-  ]);
+  }, [dateFilter, payments, searchQuery, viewingStudent]);
 
   React.useEffect(() => {
     fetchData();
@@ -443,23 +365,14 @@ export default function AdminPaymentsPageClient() {
 
   React.useEffect(() => {
     filterPayments();
-  }, [
-    payments,
-    searchQuery,
-    statusFilter,
-    methodFilter,
-    dateFilter,
-    viewingStudent,
-    filterPayments,
-  ]);
+  }, [payments, searchQuery, dateFilter, viewingStudent, filterPayments]);
 
   const resetForm = () => {
     setFormData({
       studentId: "",
       feeId: "",
       amount: "",
-      method: "CASH",
-      status: "COMPLETED",
+      discount: "0",
       date: new Date().toISOString().split("T")[0],
     });
     setIsEditing(false);
@@ -480,20 +393,6 @@ export default function AdminPaymentsPageClient() {
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (payment: Payment) => {
-    setFormData({
-      studentId: payment.student.id,
-      feeId: payment.fee?.id || "",
-      amount: payment.amount.toString(),
-      method: payment.method,
-      status: payment.status,
-      date: payment.date.split("T")[0],
-    });
-    setSelectedPayment(payment);
-    setIsEditing(true);
-    setIsDialogOpen(true);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -504,14 +403,13 @@ export default function AdminPaymentsPageClient() {
       const url = isEditing
         ? `/api/payments/${selectedPayment?.id}`
         : "/api/payments";
-      const method = isEditing ? "PUT" : "POST";
+      const method = "POST";
 
       const requestData = {
         studentId: formData.studentId,
         feeId: formData.feeId || undefined,
-        amount: parseFloat(formData.amount),
-        method: formData.method,
-        status: formData.status,
+        amount: parseFloat(formData.amount) || 0,
+        discount: parseFloat(formData.discount) || 0,
         date: formData.date,
       };
 
@@ -524,19 +422,13 @@ export default function AdminPaymentsPageClient() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(
-          isEditing
-            ? "Payment updated successfully!"
-            : "Payment recorded successfully!"
-        );
+        setSuccess("Payment recorded successfully!");
         setIsDialogOpen(false);
         resetForm();
         fetchData();
         setTimeout(() => setSuccess(""), 5000);
       } else {
-        setError(
-          data.error || `Failed to ${isEditing ? "update" : "record"} payment`
-        );
+        setError(data.error || "Failed to record payment");
       }
     } catch {
       setError("Something went wrong");
@@ -572,111 +464,55 @@ export default function AdminPaymentsPageClient() {
     }
   };
 
-  const handleStatusChange = async (
-    paymentId: string,
-    newStatus: PaymentStatus
-  ) => {
-    try {
-      const response = await fetch(`/api/payments/${paymentId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        setSuccess("Payment status updated!");
-        fetchData();
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to update status");
-      }
-    } catch {
-      setError("Error updating status");
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-        return "default";
-      case "PENDING":
-        return "secondary";
-      case "FAILED":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
-
-  const getMethodIcon = (method: string) => {
-    switch (method) {
-      case "CASH":
-        return "💵";
-      case "CARD":
-        return "💳";
-      case "BANK_TRANSFER":
-        return "🏦";
-      case "UPI":
-        return "📱";
-      default:
-        return "💰";
-    }
-  };
-
   const calculateStats = () => {
-    // If viewing a student, use their filtered payments. Otherwise, use all payments.
+    // Determine the correct data source based on the view
     const sourcePayments = viewingStudent ? filteredPayments : payments;
+    const sourceFees= viewingStudent
+      ? viewingStudent.fees || []
+      : allFees;
 
-    let sourceFees;
-    if (viewingStudent) {
-      // The student object from the API contains their associated fees
-      sourceFees = viewingStudent.fees || [];
-    } else {
-      // In global view, use the full list of all fees
-      sourceFees = allFees;
-    }
+    // --- NEW, CORRECTED CALCULATION LOGIC ---
 
+    // Total collected is the sum of only real payments (money that changed hands).
+    const totalCollected = sourcePayments
+      .filter((p) => p.type === "PAYMENT")
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+
+    // Total discounted is the sum of only discount transactions.
+    const totalDiscounted = sourcePayments
+      .filter((p) => p.type === "DISCOUNT")
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+
+    // Remaining due is based on all fee amounts minus all transaction types.
     const remainingDue = sourceFees
       .map((fee) => {
-        // For each fee, find the total paid specifically for it.
-        const totalPaidForFee = (fee.payments || [])
-          .filter((p) => p.status === "COMPLETED")
-          .reduce((sum: number, p) => sum + Number(p.amount), 0);
-
-        // Calculate the balance for this single fee.
-        const balance = Number(fee.amount) - totalPaidForFee;
-
-        // Only count positive balances.
+        // For each fee, find the total credited (paid or discounted).
+        const totalCreditedToFee = (fee.payments || []).reduce(
+          (sum: number, p) => sum + Number(p.amount),
+          0
+        );
+        const balance = Number(fee.amount) - totalCreditedToFee;
         return balance > 0 ? balance : 0;
       })
-      // 2. Sum up the balances of all fees that are not fully paid.
       .reduce((total, balance) => total + balance, 0);
-
-    const totalCollected = sourcePayments
-      .filter((p) => p.status === "COMPLETED")
-      .reduce((sum, payment) => sum + Number(payment.amount), 0);
-
-    const pendingAmount = sourcePayments
-      .filter((p) => p.status === "PENDING")
-      .reduce((sum, payment) => sum + Number(payment.amount), 0);
 
     const todayAmount = sourcePayments
       .filter(
         (p) =>
-          p.status === "COMPLETED" &&
+          p.type === "PAYMENT" &&
           new Date(p.date).toDateString() === new Date().toDateString()
       )
-      .reduce((sum, payment) => sum + Number(payment.amount), 0);
+      .reduce((sum, p) => sum + Number(p.amount), 0);
 
+    // The count of actual payment transactions.
     const completedCount = sourcePayments.filter(
-      (p) => p.status === "COMPLETED"
+      (p) => p.type === "PAYMENT"
     ).length;
 
     return {
       totalCollected,
+      totalDiscounted, // We now have a new, useful stat!
       remainingDue,
-      pendingAmount,
       todayAmount,
       completedCount,
     };
@@ -768,63 +604,90 @@ export default function AdminPaymentsPageClient() {
         )}
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Fees Overview */}
+          <Card className="overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Collection Status (Paid / Total Due)
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Fees
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
+                <Clock className="h-4 w-4 text-blue-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                <span className="text-green-600">
-                  ₹{stats.totalCollected.toLocaleString()}
-                </span>
-                <span className="text-xl text-muted-foreground">
-                  {" "}
-                  / ₹
-                  {(stats.totalCollected + stats.remainingDue).toLocaleString()}
+              <div className="text-2xl font-bold text-foreground mb-2">
+                ₹{(stats.totalCollected + stats.remainingDue).toLocaleString()}
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Outstanding</span>
+                <span className="font-medium text-orange-600">
+                  ₹{stats.remainingDue.toLocaleString()}
                 </span>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Collections */}
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Collections
+              </CardTitle>
+              <div className="h-8 w-8 rounded-full bg-green-50 flex items-center justify-center">
+                <DollarSign className="h-4 w-4 text-green-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600 mb-2">
+                ₹{stats.totalCollected.toLocaleString()}
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Discounts</span>
+                <span className="font-medium text-purple-600">
+                  ₹{stats.totalDiscounted.toLocaleString()}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Today's Collection */}
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Today&apos;s Collection
+              </CardTitle>
+              <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-600 mb-2">
+                ₹{stats.todayAmount.toLocaleString()}
+              </div>
               <p className="text-xs text-muted-foreground">
-                ₹{stats.remainingDue.toLocaleString()} remaining
+                As of {new Date().toLocaleDateString()}
               </p>
             </CardContent>
           </Card>
-          <Card>
+
+          {/* Transactions */}
+          <Card className="overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
-                ₹{stats.pendingAmount.toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Today&apos;s Collection
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Completed Payments
               </CardTitle>
-              <CheckCircle className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                ₹{stats.todayAmount.toLocaleString()}
+              <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center">
+                <CreditCard className="h-4 w-4 text-slate-600" />
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Transactions
-              </CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.completedCount}</div>
+              <div className="text-2xl font-bold text-foreground mb-2">
+                {stats.completedCount.toLocaleString()}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total transactions
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -833,7 +696,7 @@ export default function AdminPaymentsPageClient() {
         <Card>
           <CardContent className="p-4">
             <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-64">
+              <div className="flex-2 min-w-64">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
@@ -846,54 +709,6 @@ export default function AdminPaymentsPageClient() {
               </div>
 
               <div className="flex flex-col grow md:flex-row items-center gap-4">
-                <div className="flex grow gap-4">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="flex-1 cursor-pointer">
-                      <SelectValue placeholder="Filter by Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="cursor-pointer">
-                        All Status
-                      </SelectItem>
-                      <SelectItem value="COMPLETED" className="cursor-pointer">
-                        Completed
-                      </SelectItem>
-                      <SelectItem value="PENDING" className="cursor-pointer">
-                        Pending
-                      </SelectItem>
-                      <SelectItem value="FAILED" className="cursor-pointer">
-                        Failed
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={methodFilter} onValueChange={setMethodFilter}>
-                    <SelectTrigger className="flex-1 cursor-pointer">
-                      <SelectValue placeholder="Filter by Method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="cursor-pointer">
-                        All Methods
-                      </SelectItem>
-                      <SelectItem value="CASH" className="cursor-pointer">
-                        Cash
-                      </SelectItem>
-                      <SelectItem value="CARD" className="cursor-pointer">
-                        Card
-                      </SelectItem>
-                      <SelectItem
-                        value="BANK_TRANSFER"
-                        className="cursor-pointer"
-                      >
-                        Bank Transfer
-                      </SelectItem>
-                      <SelectItem value="UPI" className="cursor-pointer">
-                        UPI
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 <Select value={dateFilter} onValueChange={setDateFilter}>
                   <SelectTrigger className="flex-1 cursor-pointer">
                     <SelectValue placeholder="Filter by Date" />
@@ -926,10 +741,7 @@ export default function AdminPaymentsPageClient() {
           rowKey="id"
           emptyState={
             <div className="text-center py-8 text-gray-500">
-              {searchQuery ||
-              statusFilter !== "all" ||
-              methodFilter !== "all" ||
-              dateFilter !== "all"
+              {searchQuery || dateFilter !== "all"
                 ? "No payments found matching your filters."
                 : "No payments recorded yet."}
             </div>
@@ -939,223 +751,269 @@ export default function AdminPaymentsPageClient() {
         {/* Add/Edit Payment Dialog */}
         <div className="">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="max-w-md my-4">
-              <DialogHeader>
-                <DialogTitle>
-                  {isEditing ? "Edit Payment" : "Record New Payment"}
-                </DialogTitle>
-              </DialogHeader>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col p-0">
+              {/* Fixed Header */}
+              <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
+                <DialogHeader className="space-y-0">
+                  <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
+                    {isEditing ? "Edit Payment" : "Record New Payment"}
+                  </DialogTitle>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {isEditing
+                      ? "Update payment details"
+                      : "Enter payment information for the student"}
+                  </p>
+                </DialogHeader>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDialogOpen(false)}
+                  className="h-8 w-8 p-0 hover:bg-gray-100"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
 
-              <form onSubmit={handleSubmit} className="space-y-8">
-                <div className="space-y-1.5">
-                  <Label htmlFor="studentId">Student *</Label>
-                  <Select
-                    value={formData.studentId}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        studentId: value,
-                        feeId: "",
-                      }))
-                    }
-                    disabled={!!viewingStudent}
-                  >
-                    <SelectTrigger className="cursor-pointer">
-                      <SelectValue placeholder="Select student" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {students.map((student) => (
-                        <SelectItem
-                          key={student.id}
-                          value={student.id}
-                          className="cursor-pointer"
-                        >
-                          {student.name} - {student.rollNumber} ({student.class}
-                          -{student.section})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto px-6">
+                {/* Error Alert */}
+                {error && (
+                  <Alert className="mb-4 border-red-200 bg-red-50">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-700">
+                      {error}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-                {formData.studentId && availableFees.length > 0 && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="feeId">Fee (Optional)</Label>
+                <form onSubmit={handleSubmit} className="space-y-6 pb-6">
+                  {/* Student Selection */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="studentId"
+                      className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                    >
+                      <User className="h-4 w-4 text-gray-500" />
+                      Student *
+                    </Label>
                     <Select
-                      value={formData.feeId}
-                      onValueChange={(value) => {
-                        const fee = availableFees.find((f) => f.id === value);
+                      value={formData.studentId}
+                      onValueChange={(value) =>
                         setFormData((prev) => ({
                           ...prev,
-                          feeId: value,
-                          amount: fee ? fee.amount.toString() : prev.amount,
-                        }));
-                      }}
+                          studentId: value,
+                          feeId: "",
+                        }))
+                      }
+                      disabled={!!viewingStudent}
                     >
-                      <SelectTrigger className="cursor-pointer">
-                        <SelectValue placeholder="Select fee (or leave empty for general payment)" />
+                      <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
+                        <SelectValue placeholder="Choose a student..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableFees.map((fee) => {
-                          const totalPaid = fee.payments
-                            .filter((p) => p.status === "COMPLETED")
-                            .reduce((sum, p) => sum + p.amount, 0);
-                          const remaining = fee.amount - totalPaid;
-                          return (
-                            <SelectItem
-                              key={fee.id}
-                              value={fee.id}
-                              className="cursor-pointer"
-                            >
-                              {fee.type} - ₹{remaining} due
-                            </SelectItem>
-                          );
-                        })}
+                        {students.map((student) => (
+                          <SelectItem
+                            key={student.id}
+                            value={student.id}
+                            className="cursor-pointer py-3"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {student.name}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                Roll: {student.rollNumber} • Class:{" "}
+                                {student.class}-{student.section}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
-                )}
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="amount">Amount (₹) *</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.amount}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        amount: e.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="method">Payment Method *</Label>
-                  <Select
-                    value={formData.method}
-                    onValueChange={(value: PaymentMethod) =>
-                      setFormData((prev) => ({ ...prev, method: value }))
-                    }
-                  >
-                    <SelectTrigger className="cursor-pointer">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CASH" className="cursor-pointer">
-                        💵 Cash
-                      </SelectItem>
-                      <SelectItem value="CARD" className="cursor-pointer">
-                        💳 Card
-                      </SelectItem>
-                      <SelectItem
-                        value="BANK_TRANSFER"
-                        className="cursor-pointer"
+                  {/* Fee Selection */}
+                  {formData.studentId && availableFees.length > 0 && (
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="feeId"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
                       >
-                        🏦 Bank Transfer
-                      </SelectItem>
-                      <SelectItem value="UPI" className="cursor-pointer">
-                        📱 UPI
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="status">Status *</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value: PaymentStatus) =>
-                      setFormData((prev) => ({ ...prev, status: value }))
-                    }
-                  >
-                    <SelectTrigger className="cursor-pointer">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="COMPLETED" className="cursor-pointer">
-                        Completed
-                      </SelectItem>
-                      <SelectItem value="PENDING" className="cursor-pointer">
-                        Pending
-                      </SelectItem>
-                      <SelectItem value="FAILED" className="cursor-pointer">
-                        Failed
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="date">Payment Date *</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, date: e.target.value }))
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="paymentDate">Payment Date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between text-left font-normal cursor-pointer"
-                      >
-                        {formData.date ? (
-                          format(new Date(formData.date), "PPP")
-                        ) : (
-                          <span>Select Payment date</span>
-                        )}
-                        <CalendarIcon className="ml-2 h-4 w-4 text-gray-400" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={
-                          formData.date ? new Date(formData.date) : undefined
-                        }
-                        onSelect={(date) =>
+                        <CreditCard className="h-4 w-4 text-gray-500" />
+                        Fee Type{" "}
+                        <span className="text-gray-400 font-normal">
+                          (Optional)
+                        </span>
+                      </Label>
+                      <Select
+                        value={formData.feeId}
+                        onValueChange={(value) => {
+                          const fee = availableFees.find((f) => f.id === value);
                           setFormData((prev) => ({
                             ...prev,
-                            dueDate: date
-                              ? date.toISOString().split("T")[0]
-                              : "",
-                          }))
-                        }
-                        autoFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                            feeId: value,
+                            amount: fee ? fee.amount.toString() : prev.amount,
+                          }));
+                        }}
+                      >
+                        <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
+                          <SelectValue placeholder="Select fee type or leave empty for general payment" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableFees.map((fee) => {
+                            const totalPaid = fee.payments.reduce(
+                              (sum, p) => sum + p.amount,
+                              0
+                            );
+                            const remaining = fee.amount - totalPaid;
+                            return (
+                              <SelectItem
+                                key={fee.id}
+                                value={fee.id}
+                                className="cursor-pointer py-3"
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="font-medium">
+                                    {fee.type}
+                                  </span>
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-sm font-semibold text-green-600">
+                                      ₹{remaining.toLocaleString()}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      remaining
+                                    </span>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                <div className="flex space-x-4 pt-4">
-                  <Button type="submit" disabled={formLoading}>
-                    {formLoading
-                      ? "Saving..."
-                      : isEditing
-                      ? "Update Payment"
-                      : "Record Payment"}
-                  </Button>
+                  {/* Amount and Discount Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="amount"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <DollarSign className="h-4 w-4 text-gray-500" />
+                        Amount Paid *
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                          ₹
+                        </span>
+                        <Input
+                          id="amount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          className="h-11 pl-8 text-right"
+                          value={formData.amount}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              amount: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="discount"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        Discount Given
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                          ₹
+                        </span>
+                        <Input
+                          id="discount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          className="h-11 pl-8 text-right"
+                          value={formData.discount}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              discount: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Amount forgiven at the time of payment
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Date */}
+                  <div className="space-y-2">
+                    <DatePicker
+                      value={formData.date}
+                      onChange={(date) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          date: date || "",
+                        }))
+                      }
+                      label="Payment Date"
+                      placeholder="Select payment date"
+                      required={true}
+                    />
+                  </div>
+                </form>
+              </div>
+
+              {/* Fixed Footer */}
+              <div className="border-t border-gray-100 p-6 pt-4 bg-gray-50">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setIsDialogOpen(false)}
+                    className="h-11 px-6"
+                    disabled={formLoading}
                   >
                     Cancel
                   </Button>
+                  <Button
+                    type="submit"
+                    onClick={handleSubmit}
+                    disabled={
+                      formLoading ||
+                      !formData.studentId ||
+                      !formData.amount ||
+                      !formData.date
+                    }
+                    className="h-11 px-6 bg-blue-600 hover:bg-blue-700"
+                  >
+                    {formLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Saving...
+                      </div>
+                    ) : isEditing ? (
+                      "Update Payment"
+                    ) : (
+                      "Record Payment"
+                    )}
+                  </Button>
                 </div>
-              </form>
+              </div>
             </DialogContent>
           </Dialog>
         </div>

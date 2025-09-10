@@ -20,8 +20,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -30,7 +28,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import AdminLayout from "@/components/layouts/AdminLayout";
-import { Edit, Trash2, Plus, MoreVertical, CheckCircle } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Plus,
+  MoreVertical,
+  CheckCircle,
+  DollarSign,
+  X,
+  AlertCircle,
+  CreditCard,
+  Calendar,
+  Settings,
+} from "lucide-react";
 import { Recurrence } from "@prisma/client";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -304,87 +314,228 @@ export default function AdminFeeStructuresPage() {
           }
         />
 
+        {/* Add/Edit Fee Structure Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {isEditing ? "Edit Fee Structure" : "Create New Fee Structure"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="type">Fee Type</Label>
-                <Input
-                  id="type"
-                  value={formData.type}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, type: e.target.value }))
-                  }
-                  placeholder="e.g., Tuition Fee, Admission Fee"
-                  required
-                />
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col p-0">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
+              <DialogHeader className="space-y-0">
+                <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                  <DollarSign className="h-5 w-5 text-blue-600" />
+                  {isEditing
+                    ? "Edit Fee Structure"
+                    : "Create New Fee Structure"}
+                </DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  {isEditing
+                    ? "Update fee structure details"
+                    : "Set up a new fee structure for students"}
+                </p>
+              </DialogHeader>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsDialogOpen(false)}
+                className="h-8 w-8 p-0 hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-6">
+              {/* Error Alert */}
+              {error && (
+                <Alert className="mb-4 border-red-200 bg-red-50">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-700">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-6 pb-6">
+                {/* Fee Type */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="type"
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                  >
+                    <CreditCard className="h-4 w-4 text-gray-500" />
+                    Fee Type *
+                  </Label>
+                  <Input
+                    id="type"
+                    value={formData.type}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, type: e.target.value }))
+                    }
+                    placeholder="e.g., Tuition Fee, Admission Fee, Library Fee"
+                    className="h-11"
+                    required
+                  />
+                </div>
+
+                {/* Amount */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="amount"
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                  >
+                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    Amount *
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      ₹
+                    </span>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.amount}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          amount: e.target.value,
+                        }))
+                      }
+                      placeholder="0.00"
+                      className="h-11 pl-8 text-right"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Recurrence */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="recurrence"
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                  >
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    Recurrence *
+                  </Label>
+                  <Select
+                    value={formData.recurrence}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        recurrence: value as Recurrence,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
+                      <SelectValue placeholder="Select recurrence pattern" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ONCE" className="cursor-pointer py-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium">One-Time</span>
+                          <span className="text-xs text-gray-500">
+                            e.g., Admission Fee, Registration Fee
+                          </span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem
+                        value="MONTHLY"
+                        className="cursor-pointer py-3"
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">Monthly</span>
+                          <span className="text-xs text-gray-500">
+                            e.g., Tuition Fee, Transportation Fee
+                          </span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem
+                        value="YEARLY"
+                        className="cursor-pointer py-3"
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">Yearly</span>
+                          <span className="text-xs text-gray-500">
+                            e.g., Re-admission Fee, Annual Fee
+                          </span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Default Setting */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Settings className="h-4 w-4 text-gray-500" />
+                    Default Setting
+                  </Label>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          id="isDefault"
+                          checked={formData.isDefault}
+                          onCheckedChange={(checked) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              isDefault: checked,
+                            }))
+                          }
+                        />
+                        <Label
+                          htmlFor="isDefault"
+                          className="text-sm font-medium text-gray-900 cursor-pointer"
+                        >
+                          Apply to all new students
+                        </Label>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1 ml-9">
+                        When enabled, this fee will be automatically assigned to
+                        all newly enrolled students
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="amount">Amount (₹)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, amount: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="recurrence">Recurrence</Label>
-                <Select
-                  value={formData.recurrence}
-                  onValueChange={(value: Recurrence) =>
-                    setFormData((prev) => ({ ...prev, recurrence: value }))
-                  }
+            </div>
+
+            {/* Fixed Footer */}
+            <div className="border-t border-gray-100 p-6 pt-4 bg-gray-50">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                  className="h-11 px-6"
+                  disabled={formLoading}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ONCE">
-                      One-Time (e.g., Admission Fee)
-                    </SelectItem>
-                    <SelectItem value="MONTHLY">
-                      Monthly (e.g., Tuition Fee)
-                    </SelectItem>
-                    <SelectItem value="YEARLY">
-                      Yearly (e.g., Re-admission Fee)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="isDefault"
-                  checked={formData.isDefault}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, isDefault: checked }))
-                  }
-                />
-                <Label htmlFor="isDefault">
-                  Apply this fee to all new students by default?
-                </Label>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline">
-                    Cancel
-                  </Button>
-                </DialogClose>
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading ? "Saving..." : "Save Structure"}
+                  Cancel
                 </Button>
-              </DialogFooter>
-            </form>
+                <Button
+                  type="submit"
+                  onClick={handleSubmit}
+                  disabled={
+                    formLoading ||
+                    !formData.type ||
+                    !formData.amount ||
+                    !formData.recurrence
+                  }
+                  className="h-11 px-6 bg-blue-600 hover:bg-blue-700"
+                >
+                  {formLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Saving...
+                    </div>
+                  ) : isEditing ? (
+                    "Update Structure"
+                  ) : (
+                    "Create Structure"
+                  )}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

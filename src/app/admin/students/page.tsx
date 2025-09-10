@@ -43,23 +43,21 @@ import {
   User,
   Hash,
   Mail,
-  CalendarIcon,
   Book,
   SquareStack,
   Phone,
   MapPin,
   Eye,
   DollarSign,
+  Save,
+  Users,
+  AlertCircle,
+  X,
+  GraduationCap,
 } from "lucide-react";
-import { PaymentMethod, PaymentStatus, UserStatus } from "@prisma/client";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { UserStatus } from "@prisma/client";
 import Link from "next/link";
+import { DatePicker } from "@/components/ui/special/DatePicker";
 
 interface Student {
   id: string;
@@ -89,8 +87,7 @@ interface Student {
   payments: Array<{
     id: string;
     amount: number;
-    method: PaymentMethod;
-    status: PaymentStatus;
+    type: "PAYMENT" | "DISCOUNT";
     date: string;
   }>;
 }
@@ -107,6 +104,25 @@ interface StudentFormData {
   address: string;
   dateOfBirth: string;
 }
+
+const classOptions = [
+  "PP-1",
+  "PP-2",
+  "Class-1",
+  "Class-2",
+  "Class-3",
+  "Class-4",
+  "Class-5",
+  "Class-6",
+  "Class-7",
+  "Class-8",
+  "Class-9",
+  "Class-10",
+  "Class-11 (HS)",
+  "Class-12 (HS)",
+];
+
+const sectionOptions = ["A", "B", "C", "D"];
 
 export default function AdminStudentsPage() {
   const [students, setStudents] = React.useState<Student[]>([]);
@@ -470,9 +486,11 @@ export default function AdminStudentsPage() {
   };
 
   const calculateTotalPaid = (student: Student) => {
-    return student.payments
-      .filter((payment) => payment.status === "COMPLETED")
-      .reduce((total, payment) => total + Number(payment.amount), 0);
+    // Simply sum the amount of all transactions, as both PAYMENTS and DISCOUNTS reduce the debt.
+    return student.payments.reduce(
+      (total, payment) => total + Number(payment.amount),
+      0
+    );
   };
 
   const getStatusColor = (status: string) => {
@@ -663,295 +681,371 @@ export default function AdminStudentsPage() {
 
         {/* Add/Edit Student Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {isEditing ? "Edit Student" : "Add New Student"}
-              </DialogTitle>
-            </DialogHeader>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
+              <DialogHeader className="space-y-0">
+                <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                  <GraduationCap className="h-5 w-5 text-blue-600" />
+                  {isEditing ? "Edit Student" : "Add New Student"}
+                </DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  {isEditing
+                    ? "Update student information"
+                    : "Enter complete student details"}
+                </p>
+              </DialogHeader>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsDialogOpen(false)}
+                className="h-8 w-8 p-0 hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Full Name */}
-                <div className="relative space-y-1">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <div className="relative">
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          name: e.target.value,
-                        }))
-                      }
-                      required
-                      className="pr-10"
-                    />
-                    <User
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-6">
+              {/* Error Alert */}
+              {error && (
+                <Alert className="mb-4 border-red-200 bg-red-50">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-700">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-8 pb-6">
+                {/* Basic Information Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                    <User className="h-5 w-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Basic Information
+                    </h3>
                   </div>
-                </div>
 
-                {/* --- Email Field --- */}
-                <div className="relative space-y-1">
-                  <Label htmlFor="email">Email *</Label>
-                  <div className="relative">
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          email: e.target.value,
-                        }))
-                      }
-                      required
-                      placeholder="Enter your email"
-                      className="pr-10"
-                    />
-                    <Mail
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
-                  </div>
-                </div>
-
-                {/* Roll Number */}
-                <div className="relative space-y-1">
-                  <Label htmlFor="rollNumber">Roll Number *</Label>
-                  <div className="relative">
-                    <Input
-                      id="rollNumber"
-                      type="text"
-                      placeholder="Enter your roll number"
-                      value={formData.rollNumber}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          rollNumber: e.target.value,
-                        }))
-                      }
-                      required
-                      className="pr-10"
-                    />
-                    <Hash
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
-                  </div>
-                </div>
-
-                {/* Date of Birth */}
-                <div className="space-y-1">
-                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between text-left font-normal cursor-pointer"
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Full Name */}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="name"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
                       >
-                        {formData.dateOfBirth ? (
-                          format(new Date(formData.dateOfBirth), "PPP")
-                        ) : (
-                          <span>Select date</span>
-                        )}
-                        <CalendarIcon className="ml-2 h-4 w-4 text-gray-400" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={
-                          formData.dateOfBirth
-                            ? new Date(formData.dateOfBirth)
-                            : undefined
-                        }
-                        onSelect={(date) =>
+                        <User className="h-4 w-4 text-gray-500" />
+                        Full Name *
+                      </Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="Enter student's full name"
+                        value={formData.name}
+                        onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            dateOfBirth: date
-                              ? date.toISOString().split("T")[0]
-                              : "",
+                            name: e.target.value,
                           }))
                         }
-                        autoFocus
+                        required
+                        className="h-11"
                       />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                    </div>
 
-                {/* Class */}
-                <div className="relative space-y-1">
-                  <Label htmlFor="name">Class *</Label>
-                  <div className="relative">
-                    <Input
-                      id="class"
-                      type="text"
-                      placeholder="e.g., 10th, 12th"
-                      value={formData.class}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          class: e.target.value,
-                        }))
-                      }
-                      required
-                      className="pr-10"
-                    />
-                    <Book
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
+                    {/* Email */}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="email"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        Email *
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            email: e.target.value,
+                          }))
+                        }
+                        required
+                        placeholder="student@example.com"
+                        className="h-11"
+                      />
+                    </div>
+
+                    {/* Roll Number */}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="rollNumber"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <Hash className="h-4 w-4 text-gray-500" />
+                        Roll Number *
+                      </Label>
+                      <Input
+                        id="rollNumber"
+                        type="text"
+                        placeholder="Enter roll number"
+                        value={formData.rollNumber}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            rollNumber: e.target.value,
+                          }))
+                        }
+                        required
+                        className="h-11"
+                      />
+                    </div>
+
+                    {/* Date of Birth */}
+                    <div className="space-y-2">
+                      <DatePicker
+                        value={formData.dateOfBirth}
+                        onChange={(date) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            dateOfBirth: date || "",
+                          }))
+                        }
+                        label="Date of Birth"
+                        placeholder="Select date of birth"
+                        maxDate={new Date().toISOString().split("T")[0]} // Prevent future dates for DOB
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Section */}
-                <div className="relative space-y-1">
-                  <Label htmlFor="section">Section *</Label>
-                  <div className="relative">
-                    <Input
-                      id="section"
-                      placeholder="e.g., A, B, C"
-                      value={formData.section}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          section: e.target.value,
-                        }))
-                      }
-                      required
-                      className="pr-10"
-                    />
-                    <SquareStack
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
+                {/* Academic Information Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                    <Book className="h-5 w-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Academic Information
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Class */}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="class"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <Book className="h-4 w-4 text-gray-500" />
+                        Class *
+                      </Label>
+                      <Select
+                        value={formData.class}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({ ...prev, class: value }))
+                        }
+                        required
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select a class" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {classOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Section */}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="section"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <SquareStack className="h-4 w-4 text-gray-500" />
+                        Section *
+                      </Label>
+                      <Select
+                        value={formData.section}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({ ...prev, section: value }))
+                        }
+                        required
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select a section" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sectionOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
-                {/* Guardian Name */}
-                <div className="relative space-y-1">
-                  <Label htmlFor="guardian">Guardian Name *</Label>
-                  <div className="relative">
-                    <Input
-                      id="guardian"
-                      placeholder="Parent/Guardian name"
-                      value={formData.guardian}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          guardian: e.target.value,
-                        }))
-                      }
-                      required
-                      className="pr-10"
-                    />
-                    <User
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
+                {/* Guardian Information Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Guardian Information
+                    </h3>
                   </div>
-                </div>
 
-                {/* Guardian Phone */}
-                <div className="relative space-y-1">
-                  <Label htmlFor="guardianPhone">Guardian Phone *</Label>
-                  <div className="relative">
-                    <Input
-                      id="guardianPhone"
-                      type="tel"
-                      placeholder="+91-9876543210"
-                      value={formData.guardianPhone}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          guardianPhone: e.target.value,
-                        }))
-                      }
-                      required
-                      className="pr-10"
-                    />
-                    <Phone
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
-                  </div>
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Guardian Name */}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="guardian"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <User className="h-4 w-4 text-gray-500" />
+                        Guardian Name *
+                      </Label>
+                      <Input
+                        id="guardian"
+                        placeholder="Parent/Guardian full name"
+                        value={formData.guardian}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            guardian: e.target.value,
+                          }))
+                        }
+                        required
+                        className="h-11"
+                      />
+                    </div>
 
-                {/* Guardian Email */}
-                <div className="relative space-y-1">
-                  <Label htmlFor="guardianEmail">
-                    Guardian Email (Optional)
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="guardianEmail"
-                      type="email"
-                      placeholder="Guardian email address"
-                      value={formData.guardianEmail}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          guardianEmail: e.target.value,
-                        }))
-                      }
-                      className="pr-10"
-                    />
-                    <Mail
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
-                  </div>
-                </div>
+                    {/* Guardian Phone */}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="guardianPhone"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        Guardian Phone *
+                      </Label>
+                      <Input
+                        id="guardianPhone"
+                        type="tel"
+                        placeholder="+91-9876543210"
+                        value={formData.guardianPhone}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            guardianPhone: e.target.value,
+                          }))
+                        }
+                        required
+                        className="h-11"
+                      />
+                    </div>
 
-                {/* Address */}
-                <div className="relative space-y-1">
-                  <Label htmlFor="address">Address</Label>
-                  <div className="relative">
-                    <Input
-                      id="address"
-                      type="text"
-                      placeholder="Enter your address"
-                      value={formData.address}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          address: e.target.value,
-                        }))
-                      }
-                      className="pr-10"
-                    />
-                    <MapPin
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
+                    {/* Guardian Email */}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="guardianEmail"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        Guardian Email{" "}
+                        <span className="text-gray-400 font-normal">
+                          (Optional)
+                        </span>
+                      </Label>
+                      <Input
+                        id="guardianEmail"
+                        type="email"
+                        placeholder="guardian@example.com"
+                        value={formData.guardianEmail}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            guardianEmail: e.target.value,
+                          }))
+                        }
+                        className="h-11"
+                      />
+                    </div>
+
+                    {/* Address */}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="address"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      >
+                        <MapPin className="h-4 w-4 text-gray-500" />
+                        Address
+                      </Label>
+                      <Input
+                        id="address"
+                        type="text"
+                        placeholder="Enter complete address"
+                        value={formData.address}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            address: e.target.value,
+                          }))
+                        }
+                        className="h-11"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className="flex space-x-4 pt-4">
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading
-                    ? "Saving..."
-                    : isEditing
-                    ? "Update Student"
-                    : "Create Student"}
-                </Button>
+            {/* Fixed Footer */}
+            <div className="border-t border-gray-100 p-6 pt-4 bg-gray-50">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
+                  className="h-11 px-6"
+                  disabled={formLoading}
                 >
                   Cancel
                 </Button>
+                <Button
+                  type="submit"
+                  onClick={handleSubmit}
+                  disabled={
+                    formLoading ||
+                    !formData.name ||
+                    !formData.email ||
+                    !formData.rollNumber ||
+                    !formData.class ||
+                    !formData.section ||
+                    !formData.guardian ||
+                    !formData.guardianPhone
+                  }
+                  className="h-11 px-8 bg-blue-600 hover:bg-blue-700"
+                >
+                  {formLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Saving...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Save className="h-4 w-4" />
+                      {isEditing ? "Update Student" : "Create Student"}
+                    </div>
+                  )}
+                </Button>
               </div>
-            </form>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
