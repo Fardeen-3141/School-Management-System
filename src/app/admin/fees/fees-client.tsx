@@ -1185,7 +1185,6 @@ export default function AdminFeesPageClient() {
                     label="Due Date"
                     placeholder="Select due date"
                     required={true}
-                    minDate={new Date().toISOString().split("T")[0]} // Prevent past dates for due dates
                   />
                 </div>
 
