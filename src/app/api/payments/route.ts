@@ -10,8 +10,8 @@ import { Prisma } from "@prisma/client";
 const createPaymentSchema = z.object({
   studentId: z.string().min(1),
   feeId: z.string().optional(),
-  amount: z.number().min(0).positive(),
-  discount: z.number().min(0).positive().optional(),
+  amount: z.number().min(0),
+  discount: z.number().min(0).optional(),
   date: z.string(),
 });
 
@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("Raw Body", body);
     const validatedData = createPaymentSchema.parse(body);
     const { studentId, feeId, amount, discount = 0, date } = validatedData;
 
