@@ -2,10 +2,12 @@
 
 import React from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowRight,
   Book,
@@ -16,6 +18,44 @@ import {
   Phone,
   Mail,
 } from "lucide-react";
+
+// A new helper component to conditionally render buttons based on auth status
+function HeroButtons() {
+  const { data: session, status } = useSession();
+
+  if (status === "loading") {
+    return <Skeleton className="h-12 w-48 rounded-md" />;
+  }
+
+  if (status === "authenticated") {
+    const dashboardUrl =
+      session.user.role === "ADMIN" ? "/admin/dashboard" : "/student/dashboard";
+    return (
+      <Link href={dashboardUrl}>
+        <Button size="lg" className="cursor-pointer">
+          Go to Dashboard
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </Link>
+    );
+  }
+
+  return (
+    <div className="flex justify-center gap-4">
+      <Link href="#about">
+        <Button size="lg" className="cursor-pointer">
+          Learn More
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </Link>
+      <Link href="/auth/login">
+        <Button size="lg" variant="outline" className="cursor-pointer">
+          Portal Login
+        </Button>
+      </Link>
+    </div>
+  );
+}
 
 // Main Landing Page Component
 export default function LandingPage() {
@@ -34,19 +74,7 @@ export default function LandingPage() {
               Fostering academic excellence and holistic development since 2000.
               Welcome to our digital campus.
             </p>
-            <div className="flex justify-center gap-4">
-              <Link href="#about">
-                <Button size="lg" className="cursor-pointer">
-                  Learn More
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-              <Link href="/auth/login">
-                <Button size="lg" variant="outline" className="cursor-pointer">
-                  Portal Login
-                </Button>
-              </Link>
-            </div>
+            <HeroButtons />
           </div>
         </section>
 

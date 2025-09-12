@@ -14,9 +14,9 @@ const createStudentSchema = z.object({
   rollNumber: z.string().min(1),
   guardian: z.string().min(1),
   guardianPhone: z.string().min(1),
-  guardianEmail: z.email().optional(),
-  address: z.string().optional(),
-  dateOfBirth: z.string().optional(),
+  guardianEmail: z.email().nullable().optional(),
+  address: z.string().nullable().optional(),
+  dateOfBirth: z.string().nullable().optional(),
   email: z.email(),
   password: z.string().min(6).optional(), // Optional for admin-created students
 });
@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    console.log("Raw Body Object", body);
     const validatedData = createStudentSchema.parse(body);
 
     // Check if user already exists

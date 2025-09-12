@@ -16,9 +16,9 @@ export function Navbar() {
         </Link>
         <nav className="flex items-center gap-4">
           <Link href="/auth/login">
-            <Button variant="outline" className="cursor-pointer">
-              <LogIn className="h-4 w-4 mr-2" />
-              Portal Login
+            <Button variant="outline" className="cursor-pointer px-3 sm:px-4">
+              <LogIn className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Portal Login</span>
             </Button>
           </Link>
         </nav>

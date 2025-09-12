@@ -395,6 +395,7 @@ export default function AdminStudentsPage() {
           address: formData.address || null,
           dateOfBirth: formData.dateOfBirth || null,
         };
+        console.log("Students data", addData)
         await addStudent(addData);
         setSuccess("Student created successfully!");
       }

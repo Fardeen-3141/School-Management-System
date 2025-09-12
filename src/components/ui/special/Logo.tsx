@@ -8,7 +8,7 @@ interface Logo {
   showName: string;
 }
 
-export default function Logo({ asLink = true }) {
+export default function Logo() {
   return (
     <div className="flex items-center gap-2">
       <Link href={"/"}>
