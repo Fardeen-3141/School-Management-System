@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +47,10 @@ import {
   ColumnDef,
   ResponsiveList,
 } from "@/components/ui/special/ResponsiveList";
+import {
+  useFeeStructureStore,
+  FeeStructureData,
+} from "@/stores/useFeeStructureStore";
 
 interface FeeStructure {
   id: string;
@@ -63,18 +67,27 @@ const recurrenceLabel: { [key in Recurrence]: string } = {
 };
 
 export default function AdminFeeStructuresPage() {
-  const [structures, setStructures] = useState<FeeStructure[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const {
+    feeStructures,
+    loading,
+    error: storeError,
+    fetchFeeStructures,
+    addFeeStructure,
+    updateFeeStructure,
+    deleteFeeStructure,
+  } = useFeeStructureStore();
+
+  // Local UI state
+  const [uiError, setUiError] = React.useState("");
+  const [success, setSuccess] = React.useState("");
 
   // Form state
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isEditing, setIsEditing] = React.useState(false);
   const [selectedStructure, setSelectedStructure] =
-    useState<FeeStructure | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [formData, setFormData] = useState({
+    React.useState<FeeStructure | null>(null);
+  const [formLoading, setFormLoading] = React.useState(false);
+  const [formData, setFormData] = React.useState({
     type: "",
     amount: "",
     recurrence: "ONCE" as Recurrence,
@@ -151,26 +164,9 @@ export default function AdminFeeStructuresPage() {
     },
   ];
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchFeeStructures();
-  }, []);
-
-  const fetchFeeStructures = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/fee-structures");
-      if (response.ok) {
-        const data = await response.json();
-        setStructures(data);
-      } else {
-        setError("Failed to fetch fee structures.");
-      }
-    } catch {
-      setError("An error occurred while fetching data.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchFeeStructures]);
 
   const resetForm = () => {
     setFormData({
@@ -202,77 +198,48 @@ export default function AdminFeeStructuresPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setUiError("");
     setSuccess("");
     setFormLoading(true);
 
+    const data: FeeStructureData = {
+      ...formData,
+      amount: parseFloat(formData.amount),
+    };
+
     try {
-      const url = isEditing
-        ? `/api/fee-structures/${selectedStructure?.id}`
-        : "/api/fee-structures";
-      const method = isEditing ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          amount: parseFloat(formData.amount),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(
-          isEditing
-            ? "Fee structure updated successfully!"
-            : "Fee structure created successfully!"
-        );
-        setIsDialogOpen(false);
-        fetchFeeStructures();
-        setTimeout(() => setSuccess(""), 5000);
+      if (isEditing && selectedStructure) {
+        await updateFeeStructure(selectedStructure.id, data);
+        setSuccess("Fee structure updated successfully!");
       } else {
-        setError(
-          data.error ||
-            `Failed to ${isEditing ? "update" : "create"} structure.`
-        );
+        await addFeeStructure(data);
+        setSuccess("Fee structure created successfully!");
       }
-    } catch {
-      setError("Something went wrong.");
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (err) {
+      setUiError((err as Error).message);
+      fetchFeeStructures({ force: true }); // Rollback on error
     } finally {
       setFormLoading(false);
     }
   };
 
   const handleDelete = async (structureId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this fee structure? This cannot be undone."
-      )
-    ) {
-      return;
-    }
-    setError("");
+    if (!confirm("Are you sure...")) return;
+    setUiError("");
     setSuccess("");
 
     try {
-      const response = await fetch(`/api/fee-structures/${structureId}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess("Fee structure deleted successfully!");
-        fetchFeeStructures();
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        setError(data.error || "Failed to delete structure.");
-      }
-    } catch {
-      setError("Error deleting fee structure.");
+      await deleteFeeStructure(structureId);
+      setSuccess("Fee structure deleted successfully!");
+    } catch (err) {
+      setUiError((err as Error).message);
+      fetchFeeStructures({ force: true }); // Rollback on error
     }
   };
+
+  const finalError = uiError || storeError;
 
   return (
     <AdminLayout>
@@ -290,9 +257,14 @@ export default function AdminFeeStructuresPage() {
           </Button>
         </div>
 
-        {error && (
+        {finalError && (
           <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{finalError}</AlertDescription>
+          </Alert>
+        )}
+        {success && (
+          <Alert className="border-green-500 text-green-700">
+            <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
 
@@ -304,7 +276,7 @@ export default function AdminFeeStructuresPage() {
 
         <ResponsiveList
           columns={columns}
-          data={structures}
+          data={feeStructures}
           loading={loading}
           rowKey="id"
           emptyState={
@@ -345,11 +317,11 @@ export default function AdminFeeStructuresPage() {
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto px-6">
               {/* Error Alert */}
-              {error && (
+              {finalError && (
                 <Alert className="mb-4 border-red-200 bg-red-50">
                   <AlertCircle className="h-4 w-4 text-red-600" />
                   <AlertDescription className="text-red-700">
-                    {error}
+                    {finalError}
                   </AlertDescription>
                 </Alert>
               )}

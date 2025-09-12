@@ -41,64 +41,13 @@ import {
   ColumnDef,
   ResponsiveList,
 } from "@/components/ui/special/ResponsiveList";
-import { PaymentType } from "@prisma/client";
 import { DatePicker } from "@/components/ui/special/DatePicker";
-
-interface Payment {
-  id: string;
-  amount: number;
-  type: PaymentType;
-  date: string;
-  createdAt: string;
-  student: {
-    id: string;
-    name: string;
-    rollNumber: string;
-    class: string;
-    section: string;
-  };
-  fee: {
-    id: string;
-    type: string;
-    amount: number;
-    dueDate: string;
-  };
-}
-
-interface Student {
-  id: string;
-  name: string;
-  rollNumber: string;
-  class: string;
-  section: string;
-  fees: Array<{
-    id: string;
-    type: string;
-    amount: number;
-    dueDate: string;
-    payments: Array<{
-      amount: number;
-      status: string;
-    }>;
-  }>;
-}
-
-interface ViewingStudent {
-  id: string;
-  name: string;
-  rollNumber: string;
-  class: string;
-  section: string;
-  fees: Array<{
-    id: string;
-    type: string;
-    amount: number;
-    payments: Array<{
-      amount: number;
-      status: string;
-    }>;
-  }>;
-}
+import {
+  usePaymentStore,
+  Payment,
+  AddPaymentData,
+} from "@/stores/usePaymentStore";
+import { useFeeStore } from "@/stores/useFeeStore";
 
 interface PaymentFormData {
   studentId: string;
@@ -108,48 +57,39 @@ interface PaymentFormData {
   date: string;
 }
 
-interface Fee {
-  id: string;
-  type: string;
-  amount: number;
-  dueDate: string;
-  createdAt: string;
-  student: {
-    id: string;
-    name: string;
-    rollNumber: string;
-    class: string;
-    section: string;
-  };
-  payments: Array<{
-    id: string;
-    amount: number;
-    discount: string;
-    date: string;
-  }>;
-}
-
 export default function AdminPaymentsPageClient() {
-  const [payments, setPayments] = React.useState<Payment[]>([]);
-  const [allFees, setAllFees] = React.useState<Fee[]>([]);
-  const [students, setStudents] = React.useState<Student[]>([]);
-  const [filteredPayments, setFilteredPayments] = React.useState<Payment[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState("");
+  // Connect to the payment store
+  const {
+    payments,
+    loading: paymentsLoading,
+    error: paymentsError,
+    fetchPayments,
+    addPayment,
+    deletePayment,
+  } = usePaymentStore();
+
+  // Connect to the fee store to get students and fees for the forms
+  const {
+    students,
+    fees: allFees,
+    loading: feesLoading,
+    error: feesError,
+    fetchGlobalFeeData,
+    fetchStudentFeeData,
+  } = useFeeStore();
+
+  // Local UI state
+  const [uiError, setUiError] = React.useState("");
   const [success, setSuccess] = React.useState("");
 
   // Navigating to this page for a particular student
   const searchParams = useSearchParams();
   const studentId = searchParams.get("studentId");
-  const [viewingStudent, setViewingStudent] =
-    React.useState<ViewingStudent | null>(null);
+  const viewingStudent = useFeeStore((state) => state.viewingStudent); // Get viewingStudent from fee store
 
   // Form state
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
-  const [selectedPayment, setSelectedPayment] = React.useState<Payment | null>(
-    null
-  );
   const [formLoading, setFormLoading] = React.useState(false);
 
   // Filter state
@@ -243,77 +183,15 @@ export default function AdminPaymentsPageClient() {
     },
   ];
 
-  const fetchData = React.useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const paymentsPromise = fetch("/api/payments");
-      const studentsPromise = fetch("/api/students");
-      const feesPromise = fetch("/api/fees");
-      let studentPromise = null;
-
-      if (studentId) {
-        studentPromise = fetch(`/api/students/${studentId}`);
-      } else {
-        setViewingStudent(null);
-      }
-
-      const [paymentsResponse, studentsResponse, feesResponse] =
-        await Promise.all([paymentsPromise, studentsPromise, feesPromise]);
-
-      if (!paymentsResponse.ok || !studentsResponse.ok) {
-        throw new Error("Failed to fetch initial data.");
-      }
-
-      const paymentsData = await paymentsResponse.json();
-      const studentsData = await studentsResponse.json();
-      const feesData = await feesResponse.json();
-
-      setPayments(paymentsData);
-      setStudents(
-        studentsData.map((student: Student) => ({
-          id: student.id,
-          name: student.name,
-          rollNumber: student.rollNumber,
-          class: student.class,
-          section: student.section,
-          fees: student.fees || [],
-        }))
-      );
-      setAllFees(feesData);
-
-      if (studentPromise) {
-        const studentResponse = await studentPromise;
-        if (studentResponse.ok) {
-          const studentData = await studentResponse.json();
-          setViewingStudent(studentData);
-        } else {
-          setError(`Failed to fetch details for student ID: ${studentId}`);
-        }
-      }
-    } catch (err: unknown) {
-      setError(
-        (err as { message: string }).message ||
-          "An error occurred while fetching data."
-      );
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [studentId]); // useCallback depends on studentId
-
-  const filterPayments = React.useCallback(() => {
+  const filteredPayments = React.useMemo(() => {
     let filtered = payments;
 
-    // If viewing a single student, filter by their ID first.
     if (viewingStudent) {
       filtered = filtered.filter(
         (payment) => payment.student.id === viewingStudent.id
       );
     }
 
-    // Search filter
-    // Only apply search if not in student view
     if (searchQuery && !viewingStudent) {
       filtered = filtered.filter(
         (payment) =>
@@ -327,11 +205,9 @@ export default function AdminPaymentsPageClient() {
       );
     }
 
-    // Date filter
     if (dateFilter !== "all") {
       const today = new Date();
       const filterDate = new Date();
-
       switch (dateFilter) {
         case "today":
           filterDate.setHours(0, 0, 0, 0);
@@ -356,16 +232,20 @@ export default function AdminPaymentsPageClient() {
       }
     }
 
-    setFilteredPayments(filtered);
+    return filtered;
   }, [dateFilter, payments, searchQuery, viewingStudent]);
 
   React.useEffect(() => {
-    fetchData();
-  }, [studentId, fetchData]);
+    // Fetch all payments regardless of view
+    fetchPayments();
 
-  React.useEffect(() => {
-    filterPayments();
-  }, [payments, searchQuery, dateFilter, viewingStudent, filterPayments]);
+    // Fetch student-specific data OR global data for the forms
+    if (studentId) {
+      fetchStudentFeeData(studentId);
+    } else {
+      fetchGlobalFeeData();
+    }
+  }, [studentId, fetchPayments, fetchStudentFeeData, fetchGlobalFeeData]);
 
   const resetForm = () => {
     setFormData({
@@ -376,7 +256,6 @@ export default function AdminPaymentsPageClient() {
       date: new Date().toISOString().split("T")[0],
     });
     setIsEditing(false);
-    setSelectedPayment(null);
   };
 
   const openCreateDialog = () => {
@@ -395,81 +274,47 @@ export default function AdminPaymentsPageClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setUiError("");
     setSuccess("");
     setFormLoading(true);
 
     try {
-      const url = isEditing
-        ? `/api/payments/${selectedPayment?.id}`
-        : "/api/payments";
-      const method = "POST";
-
-      const requestData = {
+      const requestData: AddPaymentData = {
         studentId: formData.studentId,
         feeId: formData.feeId || undefined,
         amount: parseFloat(formData.amount) || 0,
         discount: parseFloat(formData.discount) || 0,
         date: formData.date,
       };
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess("Payment recorded successfully!");
-        setIsDialogOpen(false);
-        resetForm();
-        fetchData();
-        setTimeout(() => setSuccess(""), 5000);
-      } else {
-        setError(data.error || "Failed to record payment");
-      }
-    } catch {
-      setError("Something went wrong");
+      await addPayment(requestData);
+      setSuccess("Payment recorded successfully!");
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (err) {
+      setUiError((err as Error).message);
+      fetchPayments({ force: true }); // Rollback on error
     } finally {
       setFormLoading(false);
     }
   };
 
   const handleDelete = async (paymentId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this payment? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-
+    if (!confirm("Are you sure...")) return;
+    setUiError("");
+    setSuccess("");
     try {
-      const response = await fetch(`/api/payments/${paymentId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setSuccess("Payment deleted successfully!");
-        fetchData();
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to delete payment");
-      }
-    } catch {
-      setError("Error deleting payment");
+      await deletePayment(paymentId);
+      setSuccess("Payment deleted successfully!");
+    } catch (err) {
+      setUiError((err as Error).message);
+      fetchPayments({ force: true }); // Rollback on error
     }
   };
 
   const calculateStats = () => {
     // Determine the correct data source based on the view
     const sourcePayments = viewingStudent ? filteredPayments : payments;
-    const sourceFees= viewingStudent
-      ? viewingStudent.fees || []
-      : allFees;
+    const sourceFees = viewingStudent ? viewingStudent.fees || [] : allFees;
 
     // --- NEW, CORRECTED CALCULATION LOGIC ---
 
@@ -522,11 +367,16 @@ export default function AdminPaymentsPageClient() {
   const selectedStudent = students.find((s) => s.id === formData.studentId);
   const availableFees =
     selectedStudent?.fees.filter((fee) => {
-      const totalPaid = fee.payments
-        .filter((p) => p.status === "COMPLETED")
-        .reduce((sum, p) => sum + p.amount, 0);
+      // The total paid is simply the sum of all payments/discounts for that fee.
+      const totalPaid = fee.payments.reduce(
+        (sum, p) => sum + Number(p.amount),
+        0
+      );
       return totalPaid < fee.amount; // Only show fees that aren't fully paid
     }) || [];
+
+  const finalError = uiError || paymentsError || feesError;
+  const isLoading = paymentsLoading || feesLoading;
 
   return (
     <AdminLayout>
@@ -587,10 +437,10 @@ export default function AdminPaymentsPageClient() {
           </Button>
         </div>
 
-        {error && (
+        {finalError && (
           <Alert className="border-red-200 bg-red-50">
             <AlertDescription className="text-red-600">
-              {error}
+              {finalError}
             </AlertDescription>
           </Alert>
         )}
@@ -737,7 +587,7 @@ export default function AdminPaymentsPageClient() {
         <ResponsiveList
           columns={columns}
           data={filteredPayments}
-          loading={loading}
+          loading={isLoading}
           rowKey="id"
           emptyState={
             <div className="text-center py-8 text-gray-500">
@@ -778,11 +628,11 @@ export default function AdminPaymentsPageClient() {
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto px-6">
                 {/* Error Alert */}
-                {error && (
+                {finalError && (
                   <Alert className="mb-4 border-red-200 bg-red-50">
                     <AlertCircle className="h-4 w-4 text-red-600" />
                     <AlertDescription className="text-red-700">
-                      {error}
+                      {finalError}
                     </AlertDescription>
                   </Alert>
                 )}

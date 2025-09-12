@@ -35,6 +35,10 @@ import {
   ColumnDef,
   ResponsiveList,
 } from "@/components/ui/special/ResponsiveList";
+import {
+  useInvitationStore,
+  InvitationData,
+} from "@/stores/useInvitationStore";
 
 interface Invitation {
   id: string;
@@ -51,9 +55,17 @@ interface Invitation {
 }
 
 export default function InvitationManagement() {
-  const [invitations, setInvitations] = React.useState<Invitation[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState("");
+  const {
+    invitations,
+    loading: storeLoading,
+    error: storeError,
+    fetchInvitations,
+    addInvitation,
+  } = useInvitationStore();
+
+  // Local UI state
+  const [formLoading, setFormLoading] = React.useState(false);
+  const [uiError, setUiError] = React.useState("");
   const [success, setSuccess] = React.useState("");
 
   // Form state
@@ -140,30 +152,18 @@ export default function InvitationManagement() {
     },
   ];
 
-  const fetchInvitations = React.useCallback(async () => {
-    try {
-      const response = await fetch("/api/invitations");
-      if (response.ok) {
-        const data = await response.json();
-        setInvitations(data);
-      }
-    } catch {
-      console.error("Error fetching invitations:", error);
-    }
-  }, [error]);
-
   React.useEffect(() => {
     fetchInvitations();
   }, [fetchInvitations]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setUiError("");
     setSuccess("");
-    setLoading(true);
+    setFormLoading(true);
 
     try {
-      const payload = {
+      const payload: InvitationData = {
         email: formData.email,
         role: formData.role,
         ...(formData.role === "STUDENT" && {
@@ -176,35 +176,25 @@ export default function InvitationManagement() {
         }),
       };
 
-      const response = await fetch("/api/invitations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      await addInvitation(payload);
+
+      setSuccess(`Invitation created for ${formData.email}!`);
+      toast.success("Invitation created successfully!");
+      setFormData({
+        email: "",
+        role: "STUDENT",
+        class: "",
+        section: "",
+        guardian: "",
+        guardianEmail: "",
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(`Invitation created! Code: ${data.invitation.code}`);
-        toast.success("Invitation created successfully!");
-        setFormData({
-          email: "",
-          role: "STUDENT",
-          class: "",
-          section: "",
-          guardian: "",
-          guardianEmail: "",
-        });
-        fetchInvitations();
-      } else {
-        setError(data.error || "Failed to create invitation");
-        toast.error("Invitation creation failed");
-      }
-    } catch {
-      setError("Something went wrong");
-      toast.error("Something went wrong");
+    } catch (err) {
+      const errorMessage = (err as Error).message;
+      setUiError(errorMessage);
+      toast.error(errorMessage);
+      fetchInvitations({ force: true }); // Rollback on error
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
@@ -223,6 +213,8 @@ export default function InvitationManagement() {
     return `${baseUrl}${path}?code=${invitation.code}&email=${invitation.email}`;
   };
 
+  const finalError = uiError || storeError;
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -233,10 +225,10 @@ export default function InvitationManagement() {
           </p>
         </div>
 
-        {error && (
+        {finalError && (
           <Alert className="border-red-200 bg-red-50">
             <AlertDescription className="text-red-600">
-              {error}
+              {finalError}
             </AlertDescription>
           </Alert>
         )}
@@ -263,11 +255,11 @@ export default function InvitationManagement() {
 
           <CardContent className="pt-6">
             {/* Error Alert */}
-            {error && (
+            {finalError && (
               <Alert className="mb-6 border-red-200 bg-red-50">
                 <AlertCircle className="h-4 w-4 text-red-600" />
                 <AlertDescription className="text-red-700">
-                  {error}
+                  {finalError}
                 </AlertDescription>
               </Alert>
             )}
@@ -474,7 +466,7 @@ export default function InvitationManagement() {
                   type="submit"
                   onClick={handleSubmit}
                   disabled={
-                    loading ||
+                    formLoading ||
                     !formData.email ||
                     !formData.role ||
                     (formData.role === "STUDENT" &&
@@ -484,7 +476,7 @@ export default function InvitationManagement() {
                   }
                   className="h-11 px-8 bg-blue-600 hover:bg-blue-700"
                 >
-                  {loading ? (
+                  {formLoading ? (
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       Creating...
@@ -510,7 +502,7 @@ export default function InvitationManagement() {
             <ResponsiveList
               columns={columns}
               data={invitations}
-              loading={loading}
+              loading={storeLoading}
               rowKey="id"
               emptyState={
                 <div className="text-center py-8 text-gray-500">

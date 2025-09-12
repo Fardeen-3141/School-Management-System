@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,28 +37,11 @@ import {
   ResponsiveList,
 } from "@/components/ui/special/ResponsiveList";
 import { DatePicker } from "@/components/ui/special/DatePicker";
-
-interface AttendanceRecord {
-  id: string;
-  date: string;
-  status: string;
-  createdAt: string;
-  student: {
-    id: string;
-    name: string;
-    rollNumber: string;
-    class: string;
-    section: string;
-  };
-}
-
-interface Student {
-  id: string;
-  name: string;
-  rollNumber: string;
-  class: string;
-  section: string;
-}
+import {
+  useAttendanceStore,
+  AttendanceRecord,
+} from "@/stores/useAttendanceStore";
+import { useStudentStore } from "@/stores/useStudentStore";
 
 interface BulkAttendanceData {
   studentId: string;
@@ -66,14 +49,27 @@ interface BulkAttendanceData {
 }
 
 export default function AdminAttendancePage() {
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [filteredAttendance, setFilteredAttendance] = useState<
-    AttendanceRecord[]
-  >([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  // Connect to the attendance store
+  const {
+    attendance,
+    loading: attendanceLoading,
+    error: attendanceError,
+    fetchAttendance,
+    markBulkAttendance,
+    updateSingleAttendance,
+  } = useAttendanceStore();
+
+  // Connect to the student store to get the student list
+  const {
+    students,
+    loading: studentsLoading,
+    error: studentsError,
+    fetchStudents,
+  } = useStudentStore();
+
+  // Local UI state
+  const [uiError, setUiError] = React.useState("");
+  const [success, setSuccess] = React.useState("");
 
   // Form state
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
@@ -173,89 +169,34 @@ export default function AdminAttendancePage() {
     },
   ];
 
-  const fetchAttendance = React.useCallback(async () => {
-    try {
-      const response = await fetch("/api/attendance");
-      if (response.ok) {
-        const data = await response.json();
-        setAttendance(data);
-      } else {
-        setError("Failed to fetch attendance");
-      }
-    } catch {
-      setError("Error fetching attendance");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchStudents = React.useCallback(async () => {
-    try {
-      const response = await fetch("/api/students");
-      if (response.ok) {
-        const data = await response.json();
-        setStudents(
-          data.map((student: Student) => ({
-            id: student.id,
-            name: student.name,
-            rollNumber: student.rollNumber,
-            class: student.class,
-            section: student.section,
-          }))
-        );
-      }
-    } catch (error: unknown) {
-      console.error("Error fetching students:", error);
-    }
-  }, []);
-
-  const filterAttendance = React.useCallback(() => {
+  const filteredAttendance = React.useMemo(() => {
     let filtered = attendance;
-
-    // Date filter
+    // ... (The filtering logic inside remains exactly the same)
     if (selectedDate) {
       filtered = filtered.filter(
         (record) => record.date.split("T")[0] === selectedDate
       );
     }
-
-    // Class filter
     if (classFilter !== "all") {
       filtered = filtered.filter(
         (record) => record.student.class === classFilter
       );
     }
-
-    // Section filter
     if (sectionFilter !== "all") {
       filtered = filtered.filter(
         (record) => record.student.section === sectionFilter
       );
     }
-
-    // Status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter((record) => record.status === statusFilter);
     }
-
-    setFilteredAttendance(filtered);
+    return filtered;
   }, [attendance, classFilter, sectionFilter, selectedDate, statusFilter]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchAttendance();
     fetchStudents();
   }, [fetchAttendance, fetchStudents]);
-
-  useEffect(() => {
-    filterAttendance();
-  }, [
-    attendance,
-    selectedDate,
-    classFilter,
-    sectionFilter,
-    statusFilter,
-    filterAttendance,
-  ]);
 
   const openBulkAttendanceDialog = () => {
     setSelectedClass("");
@@ -299,38 +240,22 @@ export default function AdminAttendancePage() {
 
   const handleBulkSubmit = async () => {
     if (bulkAttendanceData.length === 0) {
-      setError("Please load students first");
+      setUiError("Please load students first");
       return;
     }
-
     setBulkLoading(true);
-    setError("");
+    setUiError("");
     setSuccess("");
 
     try {
-      const response = await fetch("/api/attendance/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date: bulkDate,
-          attendanceData: bulkAttendanceData,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(
-          `Attendance recorded for ${bulkAttendanceData.length} students!`
-        );
-        setIsBulkDialogOpen(false);
-        fetchAttendance();
-        setTimeout(() => setSuccess(""), 5000);
-      } else {
-        setError(data.error || "Failed to record attendance");
-      }
-    } catch {
-      setError("Something went wrong");
+      await markBulkAttendance(bulkDate, bulkAttendanceData);
+      setSuccess(
+        `Attendance recorded for ${bulkAttendanceData.length} students!`
+      );
+      setIsBulkDialogOpen(false);
+    } catch (err) {
+      setUiError((err as Error).message);
+      fetchAttendance({ force: true }); // Rollback on error
     } finally {
       setBulkLoading(false);
     }
@@ -341,27 +266,14 @@ export default function AdminAttendancePage() {
     date: string,
     status: string
   ) => {
+    setUiError("");
+    setSuccess("");
     try {
-      const response = await fetch("/api/attendance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentId,
-          date,
-          status,
-        }),
-      });
-
-      if (response.ok) {
-        setSuccess("Attendance updated!");
-        fetchAttendance();
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to update attendance");
-      }
-    } catch {
-      setError("Error updating attendance");
+      await updateSingleAttendance(studentId, date, status);
+      setSuccess("Attendance updated!");
+    } catch (err) {
+      setUiError((err as Error).message);
+      fetchAttendance({ force: true }); // Rollback on error
     }
   };
 
@@ -453,6 +365,9 @@ export default function AdminAttendancePage() {
       classStudents.some((student) => student.id === record.student.id)
   );
 
+  const finalError = uiError || attendanceError || studentsError;
+  const isLoading = attendanceLoading || studentsLoading;
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -485,10 +400,10 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
-        {error && (
+        {finalError && (
           <Alert className="border-red-200 bg-red-50">
             <AlertDescription className="text-red-600">
-              {error}
+              {finalError}
             </AlertDescription>
           </Alert>
         )}
@@ -644,7 +559,7 @@ export default function AdminAttendancePage() {
         <ResponsiveList
           columns={attendanceColumns}
           data={filteredAttendance}
-          loading={loading}
+          loading={isLoading}
           rowKey="id"
           emptyState={
             <div className="text-center py-8 text-gray-500">

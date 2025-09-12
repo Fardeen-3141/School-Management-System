@@ -2,25 +2,33 @@
 
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 interface Logo {
   showName: string;
 }
 
-export default function Logo() {
+export default function Logo({ asLink = true }) {
   return (
     <div className="flex items-center gap-2">
-      <Image
-        src={"/Logo-png-light.png"}
-        alt="logo"
-        width={100}
-        height={100}
-        className="w-12 h-12 rounded-md"
-      />
+      <Link href={"/"}>
+        <Image
+          src={"/logo.jpg"}
+          alt="logo"
+          width={1000}
+          height={1000}
+          className="h-12 w-12 md:w-14 md:h-14 rounded-md"
+        />
+      </Link>
 
       <div>
-        <h1 className="text-lg md:text-2xl font-bold tracking-tighter md:tracking-tight">Anipur Adarsha Vidyaniketan HS</h1>
-        <p className="text-xs md:text-sm text-muted-foreground font-medium tracking-tight">
+        <h1 className="font-bold tracking-tight text-lg md:text-xl">
+          <span className="hidden sm:inline">
+            Anipur Adarsha Vidyaniketan HS
+          </span>
+          <span className="inline sm:hidden">A. A. Vidyaniketan HS</span>
+        </h1>
+        <p className="text-xs text-muted-foreground font-medium">
           Inspiring Young Minds Since 2000
         </p>
       </div>

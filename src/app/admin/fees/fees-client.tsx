@@ -65,21 +65,7 @@ import {
   ResponsiveList,
 } from "@/components/ui/special/ResponsiveList";
 import { DatePicker } from "@/components/ui/special/DatePicker";
-
-interface FeeStructure {
-  id: string;
-  type: string;
-  amount: number;
-  recurrence: "ONCE" | "MONTHLY" | "YEARLY";
-}
-
-interface StudentFeeSetup {
-  id: string;
-  feeStructure: FeeStructure;
-  customAmount: number | null;
-  isActive: boolean;
-  lastGeneratedFor: string | null;
-}
+import { useFeeStore, Fee, StudentFeeSetup } from "@/stores/useFeeStore";
 
 // This helper object will be useful for displaying human-readable labels
 const recurrenceLabel = {
@@ -87,35 +73,6 @@ const recurrenceLabel = {
   MONTHLY: "Monthly",
   YEARLY: "Yearly",
 };
-
-interface Fee {
-  id: string;
-  type: string;
-  amount: number;
-  dueDate: string;
-  createdAt: string;
-  student: {
-    id: string;
-    name: string;
-    rollNumber: string;
-    class: string;
-    section: string;
-  };
-  payments: Array<{
-    id: string;
-    amount: number;
-    type: "PAYMENT" | "DISCOUNT";
-    date: string;
-  }>;
-}
-
-interface Student {
-  id: string;
-  name: string;
-  rollNumber: string;
-  class: string;
-  section: string;
-}
 
 interface FeeFormData {
   type: string;
@@ -127,25 +84,33 @@ interface FeeFormData {
   targetSection: string;
 }
 
-interface ViewingStudent extends Student {
-  user: {
-    email: string;
-  };
-}
-
 export default function AdminFeesPageClient() {
-  const [fees, setFees] = React.useState<Fee[]>([]);
-  const [students, setStudents] = React.useState<Student[]>([]);
-  const [filteredFees, setFilteredFees] = React.useState<Fee[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState("");
+  const {
+    fees,
+    students,
+    studentFeeSetups,
+    allFeeStructures,
+    viewingStudent,
+    loading,
+    error: storeError,
+    fetchGlobalFeeData,
+    fetchStudentFeeData,
+    addFee,
+    updateFee,
+    deleteFee,
+    addStudentFeeSetup,
+    updateStudentFeeSetup,
+    deleteStudentFeeSetup,
+    clearStudentView,
+  } = useFeeStore();
+
+  // --- LOCAL UI STATE ---
+  const [uiError, setUiError] = React.useState("");
   const [success, setSuccess] = React.useState("");
 
   // Navigation to this page
   const searchParams = useSearchParams();
   const studentId = searchParams.get("studentId");
-  const [viewingStudent, setViewingStudent] =
-    React.useState<ViewingStudent | null>(null);
 
   // Form state
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -167,13 +132,6 @@ export default function AdminFeesPageClient() {
     targetClass: "",
     targetSection: "",
   });
-
-  const [studentFeeSetups, setStudentFeeSetups] = React.useState<
-    StudentFeeSetup[]
-  >([]);
-  const [allFeeStructures, setAllFeeStructures] = React.useState<
-    FeeStructure[]
-  >([]);
 
   // State for the new "Fee Setup" dialog
   const [isSetupDialogOpen, setIsSetupDialogOpen] = React.useState(false);
@@ -276,73 +234,11 @@ export default function AdminFeesPageClient() {
     },
   ];
 
-  const fetchData = React.useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      // When viewing all fees, the logic is simpler and doesn't change much
-      if (!studentId) {
-        const feesPromise = fetch("/api/fees");
-        const studentsPromise = fetch("/api/students");
-        const [feesResponse, studentsResponse] = await Promise.all([
-          feesPromise,
-          studentsPromise,
-        ]);
-        if (!feesResponse.ok || !studentsResponse.ok) {
-          throw new Error("Failed to fetch initial data.");
-        }
-        const feesData = await feesResponse.json();
-        const studentsData = await studentsResponse.json();
-        setFees(feesData);
-        setStudents(studentsData);
-        setViewingStudent(null); // Ensure student view is cleared
-        setStudentFeeSetups([]); // Clear setups
-        return;
-      }
-
-      // When viewing a single student, fetch all data related to them
-      const studentPromise = fetch(`/api/students/${studentId}`);
-      const setupsPromise = fetch(`/api/students/${studentId}/fee-setups`);
-      const structuresPromise = fetch("/api/fee-structures");
-
-      const [studentResponse, setupsResponse, structuresResponse] =
-        await Promise.all([studentPromise, setupsPromise, structuresPromise]);
-
-      if (!studentResponse.ok)
-        throw new Error(`Failed to fetch student ID: ${studentId}`);
-      if (!setupsResponse.ok)
-        throw new Error("Failed to fetch student fee setups.");
-      if (!structuresResponse.ok)
-        throw new Error("Failed to fetch fee structures.");
-
-      const studentData = await studentResponse.json();
-      const setupsData = await setupsResponse.json();
-      const structuresData = await structuresResponse.json();
-
-      setViewingStudent(studentData);
-      // The student endpoint already returns their generated fees
-      setFees(studentData.fees || []);
-      setStudentFeeSetups(setupsData);
-      setAllFeeStructures(structuresData);
-    } catch (err: unknown) {
-      setError(
-        (err as { message: string }).message ||
-          "An error occurred while fetching data."
-      );
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [studentId]);
-
-  const filterFees = React.useCallback(() => {
+  const filteredFees = React.useMemo(() => {
+    // The filtering logic itself doesn't need to change, just how it gets the initial fees array.
     let filtered = fees;
-
-    // This part is fine
     if (viewingStudent) {
-      // This view doesn't use the main table, so we just show all fees for the student
-      setFilteredFees(filtered);
-      return;
+      return filtered; // In student view, we show all their fees
     }
 
     // --- LOGIC FOR THE GLOBAL VIEW ---
@@ -376,16 +272,21 @@ export default function AdminFeesPageClient() {
       filtered = filtered.filter((fee) => fee.type === typeFilter);
     }
 
-    setFilteredFees(filtered);
-  }, [fees, searchQuery, statusFilter, typeFilter, viewingStudent]); // Dependencies
+    return filtered;
+  }, [fees, searchQuery, statusFilter, typeFilter, viewingStudent]);
 
   React.useEffect(() => {
-    fetchData();
-  }, [studentId, fetchData]); // This effect will re-run whenever the studentId in the URL changes
+    if (studentId) {
+      fetchStudentFeeData(studentId);
+    } else {
+      fetchGlobalFeeData();
+    }
 
-  React.useEffect(() => {
-    filterFees();
-  }, [fees, searchQuery, statusFilter, typeFilter, viewingStudent, filterFees]);
+    // Cleanup function to clear student view when navigating away
+    return () => {
+      clearStudentView();
+    };
+  }, [studentId, fetchStudentFeeData, fetchGlobalFeeData, clearStudentView]);
 
   const resetForm = () => {
     setFormData({
@@ -427,14 +328,11 @@ export default function AdminFeesPageClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setUiError("");
     setSuccess("");
     setFormLoading(true);
 
     try {
-      const url = isEditing ? `/api/fees/${selectedFee?.id}` : "/api/fees";
-      const method = isEditing ? "PUT" : "POST";
-
       let requestData;
 
       if (formData.applyToClass && !isEditing) {
@@ -457,62 +355,45 @@ export default function AdminFeesPageClient() {
         };
       }
 
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
+      if (isEditing && selectedFee) {
+        await updateFee(selectedFee.id, requestData);
+        setSuccess("Fee updated successfully!");
+      } else {
+        await addFee(requestData);
         setSuccess(
-          isEditing
-            ? "Fee updated successfully!"
-            : formData.applyToClass
-            ? `Fees created for ${data.count || 1} students!`
+          formData.applyToClass
+            ? " Fees created for students!"
             : "Fee created successfully!"
         );
-        setIsDialogOpen(false);
-        resetForm();
-        fetchData();
-        setTimeout(() => setSuccess(""), 5000);
-      } else {
-        setError(
-          data.error || `Failed to ${isEditing ? "update" : "create"} fee`
-        );
       }
-    } catch {
-      setError("Something went wrong");
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (err) {
+      setUiError((err as Error).message);
+      if (studentId) {
+        fetchStudentFeeData(studentId, { force: true });
+      } else {
+        fetchGlobalFeeData({ force: true });
+      }
     } finally {
       setFormLoading(false);
     }
   };
 
   const handleDelete = async (feeId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this fee? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
+    if (!confirm("Are you sure...")) return;
 
+    setUiError("");
     try {
-      const response = await fetch(`/api/fees/${feeId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setSuccess("Fee deleted successfully!");
-        fetchData();
-        setTimeout(() => setSuccess(""), 3000);
+      await deleteFee(feeId);
+      setSuccess("Fee deleted successfully!");
+    } catch (err) {
+      setUiError((err as Error).message);
+      if (studentId) {
+        fetchStudentFeeData(studentId, { force: true });
       } else {
-        const data = await response.json();
-        setError(data.error || "Failed to delete fee");
+        fetchGlobalFeeData({ force: true });
       }
-    } catch {
-      setError("Error deleting fee");
     }
   };
 
@@ -521,37 +402,26 @@ export default function AdminFeesPageClient() {
     if (!studentId) return;
     setSetupFormLoading(true);
     setSuccess("");
-    setError("");
-
-    const url = isEditingSetup
-      ? `/api/students/${studentId}/fee-setups/${selectedSetup?.id}`
-      : `/api/students/${studentId}/fee-setups`;
-
-    const method = isEditingSetup ? "PUT" : "POST";
-
-    const body = isEditingSetup
-      ? {
+    setUiError("");
+    try {
+      if (isEditingSetup && selectedSetup) {
+        const body = {
           customAmount: setupFormData.customAmount
             ? parseFloat(setupFormData.customAmount)
             : null,
-        }
-      : { feeStructureId: setupFormData.feeStructureId };
-
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to save fee rule.");
+        };
+        await updateStudentFeeSetup(studentId, selectedSetup.id, body);
+      } else {
+        const body = { feeStructureId: setupFormData.feeStructureId };
+        await addStudentFeeSetup(studentId, body);
       }
       setSuccess("Fee rule saved successfully!");
       setIsSetupDialogOpen(false);
-      fetchData(); // Refresh all data
-    } catch (err: unknown) {
-      setError((err as { message: string }).message);
+    } catch (err) {
+      setUiError((err as Error).message);
+      if (studentId) {
+        fetchStudentFeeData(studentId, { force: true }); // Rollback on error
+      }
     } finally {
       setSetupFormLoading(false);
     }
@@ -560,29 +430,22 @@ export default function AdminFeesPageClient() {
   const handleToggleSetupActive = async (setup: StudentFeeSetup) => {
     if (!studentId) return;
     setSuccess("");
-    setError("");
+    setUiError("");
 
     try {
-      const response = await fetch(
-        `/api/students/${studentId}/fee-setups/${setup.id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: !setup.isActive }),
-        }
-      );
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to update status.");
-      }
+      await updateStudentFeeSetup(studentId, setup.id, {
+        isActive: !setup.isActive,
+      });
       setSuccess(
         `Fee rule '${setup.feeStructure.type}' has been ${
           !setup.isActive ? "activated" : "deactivated"
         }.`
       );
-      fetchData(); // Refresh all data
-    } catch (err: unknown) {
-      setError((err as { message: string }).message);
+    } catch (err) {
+      setUiError((err as Error).message);
+      if (studentId) {
+        fetchStudentFeeData(studentId, { force: true }); // Rollback on error
+      }
     }
   };
 
@@ -594,22 +457,18 @@ export default function AdminFeesPageClient() {
       )
     )
       return;
+
     setSuccess("");
-    setError("");
+    setUiError("");
 
     try {
-      const response = await fetch(
-        `/api/students/${studentId}/fee-setups/${setup.id}`,
-        { method: "DELETE" }
-      );
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to remove fee rule.");
-      }
+      await deleteStudentFeeSetup(studentId, setup.id);
       setSuccess("Fee rule removed successfully.");
-      fetchData(); // Refresh all data
-    } catch (err: unknown) {
-      setError((err as { message: string }).message);
+    } catch (err) {
+      setUiError((err as Error).message);
+      if (studentId) {
+        fetchStudentFeeData(studentId, { force: true }); // Rollback on error
+      }
     }
   };
 
@@ -636,7 +495,7 @@ export default function AdminFeesPageClient() {
   };
 
   const calculateStats = () => {
-    const sourceData = viewingStudent ? filteredFees : fees;
+    const sourceData = viewingStudent ? fees : fees;
 
     const totalFees = sourceData.reduce(
       (sum, fee) => sum + Number(fee.amount),
@@ -710,6 +569,8 @@ export default function AdminFeesPageClient() {
   const uniqueClasses = Array.from(
     new Set(students.map((s) => s.class))
   ).sort();
+
+  const finalError = uiError || storeError;
 
   return (
     <AdminLayout>
@@ -893,10 +754,10 @@ export default function AdminFeesPageClient() {
           </Button>
         </div>
 
-        {error && (
+        {finalError && (
           <Alert className="border-red-200 bg-red-50">
             <AlertDescription className="text-red-600">
-              {error}
+              {finalError}
             </AlertDescription>
           </Alert>
         )}
@@ -1109,11 +970,11 @@ export default function AdminFeesPageClient() {
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto px-6">
               {/* Error Alert */}
-              {error && (
+              {finalError && (
                 <Alert className="mb-4 border-red-200 bg-red-50">
                   <AlertCircle className="h-4 w-4 text-red-600" />
                   <AlertDescription className="text-red-700">
-                    {error}
+                    {finalError}
                   </AlertDescription>
                 </Alert>
               )}

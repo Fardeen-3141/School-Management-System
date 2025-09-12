@@ -7,46 +7,16 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import AdminLayout from "@/components/layouts/AdminLayout";
-import { UserStatus } from "@prisma/client";
 import Link from "next/link";
 import {
   ColumnDef,
   ResponsiveList,
 } from "@/components/ui/special/ResponsiveList";
 import { CheckCircle, Clock, Receipt, Users } from "lucide-react";
-
-interface Student {
-  id: string;
-  name: string;
-  class: string;
-  section: string;
-  rollNumber: string;
-  guardian: string;
-  guardianPhone: string;
-  guardianEmail: string | null;
-  address: string | null;
-  user: {
-    email: string;
-    name: string;
-    status: UserStatus;
-    studentId: string;
-  };
-  fees: Array<{
-    id: string;
-    type: string;
-    amount: number;
-    dueDate: string;
-  }>;
-  payments: Array<{
-    id: string;
-    amount: number;
-    discount: string;
-  }>;
-}
+import { useStudentStore, Student } from "@/stores/useStudentStore";
 
 export default function AdminDashboard() {
-  const [students, setStudents] = React.useState<Student[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { students, loading, fetchStudents } = useStudentStore();
 
   const columns: ColumnDef<Student>[] = [
     {
@@ -108,21 +78,7 @@ export default function AdminDashboard() {
 
   React.useEffect(() => {
     fetchStudents();
-  }, []);
-
-  const fetchStudents = async () => {
-    try {
-      const response = await fetch("/api/students");
-      if (response.ok) {
-        const data = await response.json();
-        setStudents(data);
-      }
-    } catch (error: unknown) {
-      console.error("Error fetching students:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchStudents]);
 
   const calculateTotalFees = (student: Student) => {
     return student.fees.reduce((total, fee) => total + Number(fee.amount), 0);
@@ -136,10 +92,9 @@ export default function AdminDashboard() {
   };
 
   const calculateTotalDiscount = (student: Student) => {
-    return student.payments.reduce(
-      (total, payment) => total + Number(payment.discount),
-      0
-    );
+    return student.payments
+      .filter((p) => p.type === "DISCOUNT") // Filter for payments that are discounts
+      .reduce((total, payment) => total + Number(payment.amount), 0); // Sum their amount
   };
 
   return (

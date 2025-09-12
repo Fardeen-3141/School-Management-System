@@ -58,6 +58,12 @@ import {
 import { UserStatus } from "@prisma/client";
 import Link from "next/link";
 import { DatePicker } from "@/components/ui/special/DatePicker";
+import {
+  useStudentStore,
+  AddStudentData,
+  UpdateStudentData,
+} from "@/stores/useStudentStore";
+import { toast } from "sonner";
 
 interface Student {
   id: string;
@@ -125,21 +131,29 @@ const classOptions = [
 const sectionOptions = ["A", "B", "C", "D"];
 
 export default function AdminStudentsPage() {
-  const [students, setStudents] = React.useState<Student[]>([]);
-  const [filteredStudents, setFilteredStudents] = React.useState<Student[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState("");
-  const [success, setSuccess] = React.useState("");
+  // All data-related state, coming from our Zustand store.
+  const {
+    students,
+    loading,
+    error: storeError,
+    fetchStudents,
+    addStudent,
+    updateStudent,
+    deleteStudent,
+    updateStudentStatus,
+  } = useStudentStore();
 
-  // Form state
+  // Local UI state for dialogs, forms, and success messages.
+  const [uiError, setUiError] = React.useState("");
+  const [success, setSuccess] = React.useState("");
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
-  const [selectedStudent, setSelectedStudent] = React.useState<Student | null>(
-    null
-  );
+  const [selectedStudentId, setSelectedStudentId] = React.useState<
+    string | null
+  >(null);
   const [formLoading, setFormLoading] = React.useState(false);
 
-  // Filter state
+  // Filter state remains local to the component.
   const [searchQuery, setSearchQuery] = React.useState("");
   const [classFilter, setClassFilter] = React.useState("all");
   const [statusFilter, setStatusFilter] = React.useState("all");
@@ -284,26 +298,9 @@ export default function AdminStudentsPage() {
     },
   ];
 
-  const fetchStudents = React.useCallback(async () => {
-    try {
-      const response = await fetch("/api/students");
-      if (response.ok) {
-        const data = await response.json();
-        setStudents(data);
-      } else {
-        setError("Failed to fetch students");
-      }
-    } catch {
-      setError("Error fetching students");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const filterStudents = React.useCallback(() => {
+  const filteredStudents = React.useMemo(() => {
     let filtered = students;
 
-    // Search filter
     if (searchQuery) {
       filtered = filtered.filter(
         (student) =>
@@ -318,28 +315,22 @@ export default function AdminStudentsPage() {
       );
     }
 
-    // Class filter
     if (classFilter !== "all") {
       filtered = filtered.filter((student) => student.class === classFilter);
     }
 
-    // Status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter(
         (student) => student.user.status === statusFilter
       );
     }
 
-    setFilteredStudents(filtered);
-  }, [classFilter, searchQuery, statusFilter, students]);
+    return filtered;
+  }, [students, searchQuery, classFilter, statusFilter]);
 
   React.useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
-
-  React.useEffect(() => {
-    filterStudents();
-  }, [students, searchQuery, classFilter, statusFilter, filterStudents]);
 
   const resetForm = () => {
     setFormData({
@@ -355,7 +346,7 @@ export default function AdminStudentsPage() {
       dateOfBirth: "",
     });
     setIsEditing(false);
-    setSelectedStudent(null);
+    setSelectedStudentId(null);
   };
 
   const openCreateDialog = () => {
@@ -376,55 +367,56 @@ export default function AdminStudentsPage() {
       address: student.address ?? "",
       dateOfBirth: student.dateOfBirth ? student.dateOfBirth.split("T")[0] : "",
     });
-    setSelectedStudent(student);
+    setSelectedStudentId(student.id);
     setIsEditing(true);
     setIsDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setUiError("");
     setSuccess("");
     setFormLoading(true);
 
     try {
-      const url = isEditing
-        ? `/api/students/${selectedStudent?.id}`
-        : "/api/students";
-      const method = isEditing ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      if (isEditing && selectedStudentId) {
+        const updateData: UpdateStudentData = {
           ...formData,
-          guardianEmail: formData.guardianEmail || undefined,
-          address: formData.address || undefined,
-          dateOfBirth: formData.dateOfBirth || undefined,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(
-          isEditing
-            ? "Student updated successfully!"
-            : `Student created successfully! ${
-                data.defaultPassword ? `Password: ${data.defaultPassword}` : ""
-              }`
-        );
-        setIsDialogOpen(false);
-        resetForm();
-        fetchStudents();
-        setTimeout(() => setSuccess(""), 5000);
+          guardianEmail: formData.guardianEmail || null,
+          address: formData.address || null,
+          dateOfBirth: formData.dateOfBirth || null,
+        };
+        await updateStudent(selectedStudentId, updateData);
+        setSuccess("Student updated successfully!");
       } else {
-        setError(
-          data.error || `Failed to ${isEditing ? "update" : "create"} student`
-        );
+        const addData: AddStudentData = {
+          ...formData,
+          guardianEmail: formData.guardianEmail || null,
+          address: formData.address || null,
+          dateOfBirth: formData.dateOfBirth || null,
+        };
+        await addStudent(addData);
+        setSuccess("Student created successfully!");
       }
-    } catch {
-      setError("Something went wrong");
+      toast.success(
+        <div className="text-green-500">
+          <strong>Success</strong>
+          <div>Student Created Successfully</div>
+        </div>
+      );
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unknown error occurred";
+      setUiError(errorMessage);
+      toast.error(
+        <div className="text-destructive">
+          <strong>Error</strong>
+          <div>Failed to create student</div>
+        </div>
+      );
+      fetchStudents({ force: true }); // Rollback on error
     } finally {
       setFormLoading(false);
     }
@@ -438,46 +430,45 @@ export default function AdminStudentsPage() {
     ) {
       return;
     }
-
+    setUiError("");
+    setSuccess("");
     try {
-      const response = await fetch(`/api/students/${studentId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setSuccess("Student deleted successfully!");
-        fetchStudents();
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to delete student");
-      }
-    } catch {
-      setError("Error deleting student");
+      await deleteStudent(studentId);
+      setSuccess("Student deleted successfully!");
+      toast.success(
+        <div className="text-green-500">
+          <strong>Success</strong>
+          <div>Student Deleted Successfully</div>
+        </div>
+      );
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to delete student";
+      setUiError(errorMessage);
+      toast.error(
+        <div className="text-destructive">
+          <strong>Error</strong>
+          <div>Failed to delete student</div>
+        </div>
+      );
+      fetchStudents({ force: true }); // Rollback on error
     }
   };
 
-  const handleStatusChange = async (studentId: string, newStatus: string) => {
+  const handleStatusChange = async (
+    studentId: string,
+    newStatus: UserStatus
+  ) => {
+    setUiError("");
     setSuccess("");
-    setError("");
-
     try {
-      const response = await fetch(`/api/students/${studentId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        setSuccess("Student status updated!");
-        fetchStudents();
-        setTimeout(() => setSuccess(""), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to update status");
-      }
-    } catch {
-      setError("Error updating status");
+      await updateStudentStatus(studentId, newStatus);
+      setSuccess("Student status updated!");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to update status";
+      setUiError(errorMessage);
+      fetchStudents({ force: true }); // Rollback on error
     }
   };
 
@@ -512,6 +503,8 @@ export default function AdminStudentsPage() {
     new Set(students.map((s) => s.class))
   ).sort();
 
+  const finalError = uiError || storeError;
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -528,11 +521,9 @@ export default function AdminStudentsPage() {
           </Button>
         </div>
 
-        {error && (
-          <Alert className="border-red-200 bg-red-50">
-            <AlertDescription className="text-red-600">
-              {error}
-            </AlertDescription>
+        {finalError && (
+          <Alert variant="destructive">
+            <AlertDescription>{finalError}</AlertDescription>
           </Alert>
         )}
 
@@ -708,11 +699,11 @@ export default function AdminStudentsPage() {
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto px-6">
               {/* Error Alert */}
-              {error && (
+              {finalError && (
                 <Alert className="mb-4 border-red-200 bg-red-50">
                   <AlertCircle className="h-4 w-4 text-red-600" />
                   <AlertDescription className="text-red-700">
-                    {error}
+                    {finalError}
                   </AlertDescription>
                 </Alert>
               )}

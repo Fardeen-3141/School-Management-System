@@ -1,91 +1,148 @@
-# Implementing an automated Fee Managemnet system
+  ### README.md
 
-Phase 1: Database Schema Enhancements
+  You can copy the entire content below and save it as README.md in the root of your project.
 
-The core of this system lies in the database design. We need to create a flexible structure that defines what a
-fee is (the template) and how it applies to a student.
 
-1.  Create a `FeeStructure` Model: This will be our template for all types of fees in the school.
+  ``markdown
+  # School Fee & Student Management System
 
-    - id: Standard unique ID.
-    - type: The name of the fee (e.g., "Tuition Fee", "Re-admission Fee", "Conveyance Fee").
-    - amount: The standard amount for this fee.
-    - recurrence: An enum that will be the heart of our automation. It will have three possible values:
-      - ONCE: For fees like "Admission Fee".
-      - MONTHLY: For fees like "Tuition Fee".
-      - YEARLY: For fees like "Re-admission Fee".
-    - isDefault: A boolean flag. If true, this fee structure will be automatically applied to every new student who
-      registers.
+  !Anipur Adarsha Vidyaniketan HS (public/Logo-png-light.png)
 
-2.  Create a `StudentFeeSetup` Model: This will be a "join" table that links a Student to a FeeStructure and allows
-    for customization. This is where we'll manage which recurring fees are active for each student.
+  A comprehensive, modern web application designed to manage student records, automate fee collection, and streamline
+   financial administration for educational institutions.
 
-    - id: Standard unique ID.
-    - studentId: A foreign key linking to the Student model.
-    - feeStructureId: A foreign key linking to the FeeStructure model.
-    - customAmount: An optional Decimal field. This is a powerful feature that allows an admin to override the
-      standard amount for a specific student (e.g., for a scholarship or concession).
-    - isActive: A boolean flag. This lets an admin enable or disable a recurring fee for a student (e.g., disable
-      "Conveyance Fee" if they stop using the bus).
-    - lastGeneratedFor: A crucial DateTime field. For a monthly fee, this will store the first day of the month for
-      which a Fee record was last generated. This prevents the system from creating duplicate fees.
+  ---
 
-3.  Modify the existing `Fee` Model:
-    - We'll add an optional studentFeeSetupId field. This will link a generated Fee record back to the
-      StudentFeeSetup that created it, providing a clear audit trail.
+  ## ✨ Key Features
 
-Phase 2: Backend Logic (The Automation Engine)
+     👨‍💼 Role-Based Access Control: Separate, secure portals for Admins and Students*.
+     💳 Advanced Fee Management:*
+      *   Define custom fee structures (e.g., Tuition, Admission, Transportation).
+         Set up recurring billing cycles: One-Time, Monthly, or Yearly*.
+      *   Apply fee structures to all new students by default or assign them individually.
+      *   Override standard fee amounts for individual students (for scholarships or concessions).
+     🤖 Automated Recurring Billing:* A nightly cron job automatically generates monthly and yearly fee invoices for
+  all active students, eliminating manual work and ensuring timely billing.
+     💸 Secure Payment & Discount Recording:*
+      *   Log payments against specific fees or as a general payment that auto-allocates to the oldest dues.
+      *   Record discounts and waivers separately from actual payments.
+     ✅ Attendance Tracking:* Mark attendance for individual students or in bulk for an entire class.
+     👤 Full Student Lifecycle Management:* Admins can manage all student profile information, view detailed
+  financial ledgers, and track academic status.
+     📧 Invitation-Only Registration:* Secure onboarding process where admins invite new students and staff via
+  email.
+     📊 Data-Rich Dashboards:* At-a-glance overview of total collections, outstanding dues, student enrollment
+  numbers, and more.
 
-This phase involves creating the API endpoints to manage the new structures and the core logic for automation.
+  ---
 
-1.  API for Fee Structure Management (`/api/fee-structures`):
+  ## 🚀 Tech Stack
 
-    - We'll create standard CRUD (Create, Read, Update, Delete) endpoints for admins to manage the FeeStructure
-      templates.
+     Framework:* Next.js (https://nextjs.org/) 15 (App Router)
+     Language:* TypeScript (https://www.typescriptlang.org/)
+     Database:* PostgreSQL (https://www.postgresql.org/)
+     ORM:* Prisma (https://www.prisma.io/)
+     Authentication:* NextAuth.js (https://next-auth.js.org/) (Credentials & Google Provider)
+     UI Components:* shadcn/ui (https://ui.shadcn.com/)
+     Styling:* Tailwind CSS (https://tailwindcss.com/)
+     State Management:* Zustand (https://zustand-demo.pmnd.rs/)
+     Deployment:* Vercel (https://vercel.com/)
 
-2.  API for Student Fee Setup (`/api/students/[studentId]/fee-setups`):
+  ---
 
-    - This will allow the frontend to fetch the fee setups for a specific student and to apply, customize, or
-      deactivate fee structures for them.
+  ## 🛠️ Getting Started: Local Development
 
-3.  The Cron Job (Scheduled Task):
-    - This is the automation engine. It's a background process that will run automatically on a schedule (e.g., once
-      every day).
-    - How it will work:
-      1.  The job runs (e.g., at midnight).
-      2.  It queries the database for all StudentFeeSetup records that are isActive.
-      3.  It iterates through each record and checks its recurrence type (MONTHLY or YEARLY).
-      4.  For `MONTHLY` fees: It compares the lastGeneratedFor date with the current month. If a fee has not been
-          generated for the current month, it creates a new record in the Fee table.
-      5.  For `YEARLY` fees: It does the same check, but on a yearly basis.
-      6.  After creating the Fee record, it updates the `lastGeneratedFor` timestamp on the StudentFeeSetup record.
-          This is the most critical step to prevent duplicates.
-    - How to implement: We will create a special, secure API endpoint (e.g., /api/cron/generate-recurring-fees). We
-      can then use a service like Vercel Cron Jobs (which is integrated into Next.js hosting) to call this endpoint
-      on a schedule (e.g., 0 0 \* \* \* for midnight every day).
+  Follow these steps to set up and run the project on your local machine.
 
-Phase 3: Frontend UI for Management
+  ### Prerequisites
 
-The final phase is to give the admin the tools to manage this new system.
+  *   Node.js (https://nodejs.org/en/) (v20.x or later)
+  *   pnpm (https://pnpm.io/) (or npm/yarn)
+  *   A running PostgreSQL (https://www.postgresql.org/download/) database instance.
 
-1.  New "Fee Structures" Page (`/admin/fee-structures`):
+  ### 1. Clone the Repository
 
-    - A new page in the admin panel where your father can define and manage the school's fee templates (e.g.,
-      create "Tuition Fee", set its default amount and monthly recurrence).
+  `bash
+  git clone https://github.com/your-username/your-repo-name.git
+  cd your-repo-name
+  `
 
-2.  Enhanced Student Fee Management View:
-    - We will enhance the student-specific fees page (/admin/fees?studentId=...).
-    - It will now have two sections:
-      1.  Fee Setup: A list of all fee structures applied to the student, showing if they are active and any custom
-          amounts. The admin will be able to activate/deactivate recurring fees or set custom amounts here.
-      2.  Generated Fees Ledger: The existing table of individual Fee records that have been generated (both
-          automatically and manually).
+  ### 2. Install Dependencies
 
----
+  `bash
+  pnpm install
 
-Our Implementation Steps:
+  `
 
-1.  Confirm the Plan: We'll first agree on this plan.
-2.  Database Migration: I will provide you with the necessary changes for your prisma/schema.prisma file.
-3.  Backend Development: We'll create the new API routes and the cron job logic.
-4.  Frontend Development: We'll build the new UI for managing fee structures and update the student fee pages.
+  ### 3. Set Up Environment Variables
+
+  Create a .env.local file in the root of the project by copying the example file:
+
+  `bash
+  cp .env.example .env.local
+  `
+
+  Now, fill in the required variables in .env.local:
+
+  `env
+  # Prisma / PostgreSQL
+  DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
+  DIRECT_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
+
+
+  NextAuth.js
+  Vercel Cron Job Security
+  `
+
+  This will sync your database with the schema defined in prisma/schema.prisma.
+
+  ### 5. Run the Development Server
+
+  `bash
+  pnpm dev
+  `
+
+  The application should now be running at http://localhost:3000 (http://localhost:3000).
+
+  ---
+
+  ## 📂 Project Structure
+
+  `
+  aavhs-site/
+  ├── prisma/                # Prisma schema, migrations, and seed scripts
+  ├── public/                # Static assets like images and fonts
+  ├── src/
+  │   ├── app/               # Next.js App Router: pages and API routes
+  │   │   ├── admin/         # Admin-only pages
+  │   │   ├── api/           # All backend API route handlers
+  │   │   ├── student/       # Student-only pages
+  │   │   └── ...
+  │   ├── components/        # Shared React components (layouts, UI)
+  │   ├── lib/               # Core libraries (Prisma client, auth config)
+  │   ├── stores/            # Zustand state management stores
+  │   └── types/             # Global TypeScript type definitions
+  ├── .env.local             # Local environment variables (ignored by Git)
+  ├── next.config.ts         # Next.js configuration
+  ├── package.json           # Project dependencies and scripts
+  └── tsconfig.json          # TypeScript configuration
+
+  `
+
+  ---
+
+  ## 🚀 Deployment
+
+  This application is optimized for deployment on Vercel (https://vercel.com/).
+
+     Build Command:* pnpm build
+     Environment Variables:* Ensure all environment variables from .env.local are configured in the Vercel project
+  settings.
+     Cron Job:* The automated recurring fee generation is handled by a Vercel Cron Job configured in vercel.json.
+  The cron job is secured using the CRON_SECRET environment variable.
+
+  ---
+
+  ## 📄 License
+
+  This project is licensed under the MIT License. See the LICENSE (LICENSE) file for details.
