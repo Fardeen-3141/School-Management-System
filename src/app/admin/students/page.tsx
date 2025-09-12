@@ -328,6 +328,8 @@ export default function AdminStudentsPage() {
     return filtered;
   }, [students, searchQuery, classFilter, statusFilter]);
 
+  // console.log("Filtered Students", filteredStudents)
+
   React.useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
@@ -474,12 +476,12 @@ export default function AdminStudentsPage() {
   };
 
   const calculateTotalFees = (student: Student) => {
-    return student.fees.reduce((total, fee) => total + Number(fee.amount), 0);
+    return student.fees?.reduce((total, fee) => total + Number(fee.amount), 0);
   };
 
   const calculateTotalPaid = (student: Student) => {
     // Simply sum the amount of all transactions, as both PAYMENTS and DISCOUNTS reduce the debt.
-    return student.payments.reduce(
+    return student.payments?.reduce(
       (total, payment) => total + Number(payment.amount),
       0
     );

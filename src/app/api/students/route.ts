@@ -73,7 +73,6 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    console.log("Raw Body Object", body);
     const validatedData = createStudentSchema.parse(body);
 
     // Check if user already exists
