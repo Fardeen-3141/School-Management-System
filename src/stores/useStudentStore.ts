@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { PaymentType, UserStatus } from "@prisma/client";
+import { FETCH_INTERVAL } from "@/data/constants";
 
 // Define the shape of a single student object, matching the frontend model
 interface StudentUser {
@@ -73,8 +74,6 @@ interface StudentState {
   updateStudentStatus: (studentId: string, status: UserStatus) => Promise<void>;
 }
 
-const FIVE_MINUTES = 5 * 60 * 1000;
-
 export const useStudentStore = create<StudentState>((set, get) => ({
   students: [],
   loading: false,
@@ -89,7 +88,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     if (
       !options?.force &&
       lastFetched &&
-      now.getTime() - lastFetched.getTime() < FIVE_MINUTES &&
+      now.getTime() - lastFetched.getTime() < FETCH_INTERVAL &&
       students.length > 0
     ) {
       console.log("Using cached students data.");

@@ -282,11 +282,18 @@ export default function AdminFeesPageClient() {
       fetchGlobalFeeData();
     }
 
-    // Cleanup function to clear student view when navigating away
+    // Don't clear student view here - let it persist during navigation
+  }, [studentId, fetchStudentFeeData, fetchGlobalFeeData]);
+
+  // Add a separate effect for cleanup only when truly navigating away
+  React.useEffect(() => {
     return () => {
-      clearStudentView();
+      // Only clear when component unmounts
+      if (!studentId) {
+        clearStudentView();
+      }
     };
-  }, [studentId, fetchStudentFeeData, fetchGlobalFeeData, clearStudentView]);
+  }, []); // Empty dependency array - only runs on unmount
 
   const resetForm = () => {
     setFormData({

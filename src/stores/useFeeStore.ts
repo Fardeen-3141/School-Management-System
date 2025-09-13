@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { Recurrence, PaymentType } from "@prisma/client";
+import { FETCH_INTERVAL } from "@/data/constants";
 
 interface Student {
   id: string;
@@ -87,8 +88,6 @@ interface FeeState {
   clearStudentView: () => void;
 }
 
-const FIVE_MINUTES = 5 * 60 * 1000;
-
 export const useFeeStore = create<FeeState>((set, get) => ({
   fees: [],
   students: [],
@@ -107,7 +106,7 @@ export const useFeeStore = create<FeeState>((set, get) => ({
     if (
       !options?.force &&
       globalLastFetched &&
-      new Date().getTime() - globalLastFetched.getTime() < FIVE_MINUTES
+      new Date().getTime() - globalLastFetched.getTime() < FETCH_INTERVAL
     ) {
       console.log("Using cached GLOBAL fee data.");
       return;
@@ -141,33 +140,37 @@ export const useFeeStore = create<FeeState>((set, get) => ({
     }
   },
 
+  // In useFeeStore.ts, update the fetchStudentFeeData function:
   fetchStudentFeeData: async (studentId: string, options) => {
     const { studentCache } = get();
-    // UPDATED CACHE LOGIC: Checks if the cached data is for the correct student AND is fresh
+
     if (
       !options?.force &&
       studentCache.studentId === studentId &&
       studentCache.lastFetched &&
-      new Date().getTime() - studentCache.lastFetched.getTime() < FIVE_MINUTES
+      new Date().getTime() - studentCache.lastFetched.getTime() < FETCH_INTERVAL
     ) {
       console.log(`Using cached data for student ${studentId}.`);
       return;
     }
 
     set({ loading: true, error: null });
+
     try {
       const [studentRes, setupsRes, structuresRes] = await Promise.all([
         fetch(`/api/students/${studentId}`),
         fetch(`/api/students/${studentId}/fee-setups`),
         fetch("/api/fee-structures"),
       ]);
+
       if (!studentRes.ok || !setupsRes.ok || !structuresRes.ok)
         throw new Error("Failed to fetch student fee data");
 
-      const studentData: Student = await studentRes.json();
-      const setupsData: StudentFeeSetup[] = await setupsRes.json();
-      const structuresData: FeeStructure[] = await structuresRes.json();
+      const studentData = await studentRes.json();
+      const setupsData = await setupsRes.json();
+      const structuresData = await structuresRes.json();
 
+      // Set all data atomically to prevent race conditions
       set({
         viewingStudent: studentData,
         fees: studentData.fees || [],
@@ -175,6 +178,7 @@ export const useFeeStore = create<FeeState>((set, get) => ({
         allFeeStructures: structuresData,
         loading: false,
         studentCache: { studentId: studentId, lastFetched: new Date() },
+        globalLastFetched: null, // Clear global cache when viewing student
       });
     } catch (error: unknown) {
       set({ error: (error as Error).message, loading: false });

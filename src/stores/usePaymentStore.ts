@@ -1,5 +1,8 @@
+// src\stores\usePaymentStore.ts
+
 import { create } from "zustand";
 import { PaymentType } from "@prisma/client";
+import { FETCH_INTERVAL } from "@/data/constants";
 
 // --- TYPE DEFINITIONS ---
 export interface Payment {
@@ -36,35 +39,101 @@ interface PaymentState {
   payments: Payment[];
   loading: boolean;
   error: string | null;
-  lastFetched: Date | null;
-  fetchPayments: (options?: { force?: boolean }) => Promise<void>;
+
+  // Separate cache tracking for global vs student data
+  globalLastFetched: Date | null;
+  studentCache: {
+    studentId: string | null;
+    lastFetched: Date | null;
+  };
+  viewingStudent: { id: string; name: string } | null;
+
+  // Actions
+  fetchGlobalPayments: (options?: { force?: boolean }) => Promise<void>;
+  fetchStudentPayments: (
+    studentId: string,
+    options?: { force?: boolean }
+  ) => Promise<void>;
   addPayment: (data: AddPaymentData) => Promise<void>;
   deletePayment: (id: string) => Promise<void>;
+  clearStudentView: () => void;
 }
-
-const FIVE_MINUTES = 5 * 60 * 1000;
 
 export const usePaymentStore = create<PaymentState>((set, get) => ({
   payments: [],
   loading: false,
   error: null,
-  lastFetched: null,
+  globalLastFetched: null,
+  studentCache: { studentId: null, lastFetched: null },
+  viewingStudent: null,
 
-  fetchPayments: async (options) => {
-    const { lastFetched } = get();
+  fetchGlobalPayments: async (options) => {
+    const { globalLastFetched } = get();
     if (
       !options?.force &&
-      lastFetched &&
-      new Date().getTime() - lastFetched.getTime() < FIVE_MINUTES
+      globalLastFetched &&
+      new Date().getTime() - globalLastFetched.getTime() < FETCH_INTERVAL
     ) {
+      console.log("Using cached GLOBAL payment data.");
       return;
     }
-    set({ loading: true, error: null });
+
+    set({ loading: true, error: null, viewingStudent: null });
+
     try {
       const response = await fetch("/api/payments");
       if (!response.ok) throw new Error("Failed to fetch payments");
       const data: Payment[] = await response.json();
-      set({ payments: data, loading: false, lastFetched: new Date() });
+
+      set({
+        payments: data,
+        loading: false,
+        globalLastFetched: new Date(),
+        studentCache: { studentId: null, lastFetched: null },
+      });
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false });
+    }
+  },
+
+  fetchStudentPayments: async (studentId: string, options) => {
+    const { studentCache } = get();
+
+    if (
+      !options?.force &&
+      studentCache.studentId === studentId &&
+      studentCache.lastFetched &&
+      new Date().getTime() - studentCache.lastFetched.getTime() < FETCH_INTERVAL
+    ) {
+      console.log(`Using cached payment data for student ${studentId}.`);
+      return;
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      // Fetch all payments but set context for student view
+      const response = await fetch("/api/payments");
+      if (!response.ok) throw new Error("Failed to fetch payments");
+      const data: Payment[] = await response.json();
+
+      // Find student info for context
+      const studentPayments = data.filter((p) => p.student.id === studentId);
+      const studentInfo =
+        studentPayments.length > 0
+          ? {
+              id: studentPayments[0].student.id,
+              name: studentPayments[0].student.name,
+            }
+          : { id: studentId, name: "Unknown Student" };
+
+      set({
+        payments: data, // Keep all payments for potential navigation
+        loading: false,
+        studentCache: { studentId, lastFetched: new Date() },
+        viewingStudent: studentInfo,
+        globalLastFetched: null, // Clear global cache
+      });
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
     }
@@ -80,9 +149,14 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
       const errorData = await response.json();
       throw new Error(errorData.error || "Failed to record payment");
     }
-    // Because adding a payment can have complex side-effects (like auto-allocating
-    // to multiple fees), the safest strategy is to refetch all payments.
-    await get().fetchPayments({ force: true });
+
+    // Refetch based on current context
+    const { viewingStudent } = get();
+    if (viewingStudent) {
+      await get().fetchStudentPayments(viewingStudent.id, { force: true });
+    } else {
+      await get().fetchGlobalPayments({ force: true });
+    }
   },
 
   deletePayment: async (id) => {
@@ -91,9 +165,20 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
       const errorData = await response.json();
       throw new Error(errorData.error || "Failed to delete payment");
     }
+
     set((state) => ({
       payments: state.payments.filter((p) => p.id !== id),
-      lastFetched: new Date(),
+      globalLastFetched: state.viewingStudent ? null : new Date(),
+      studentCache: state.viewingStudent
+        ? { ...state.studentCache, lastFetched: new Date() }
+        : { studentId: null, lastFetched: null },
     }));
+  },
+
+  clearStudentView: () => {
+    set({
+      viewingStudent: null,
+      studentCache: { studentId: null, lastFetched: null },
+    });
   },
 }));

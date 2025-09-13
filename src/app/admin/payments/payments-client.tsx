@@ -63,9 +63,11 @@ export default function AdminPaymentsPageClient() {
     payments,
     loading: paymentsLoading,
     error: paymentsError,
-    fetchPayments,
+    fetchGlobalPayments,
+    fetchStudentPayments,
     addPayment,
     deletePayment,
+    clearStudentView: clearPaymentView,
   } = usePaymentStore();
 
   // Connect to the fee store to get students and fees for the forms
@@ -76,6 +78,7 @@ export default function AdminPaymentsPageClient() {
     error: feesError,
     fetchGlobalFeeData,
     fetchStudentFeeData,
+    clearStudentView, // Add this for fee store cleanup
   } = useFeeStore();
 
   // Local UI state
@@ -236,16 +239,33 @@ export default function AdminPaymentsPageClient() {
   }, [dateFilter, payments, searchQuery, viewingStudent]);
 
   React.useEffect(() => {
-    // Fetch all payments regardless of view
-    fetchPayments();
-
-    // Fetch student-specific data OR global data for the forms
     if (studentId) {
+      // Fetch student-specific payments
+      fetchStudentPayments(studentId);
+      // Also fetch fee data for the forms
       fetchStudentFeeData(studentId);
     } else {
+      // Fetch global payments
+      fetchGlobalPayments();
+      // Also fetch global fee data for the forms
       fetchGlobalFeeData();
     }
-  }, [studentId, fetchPayments, fetchStudentFeeData, fetchGlobalFeeData]);
+
+    // Cleanup function
+    return () => {
+      if (!studentId) {
+        clearPaymentView(); // Use the renamed function
+        clearStudentView(); // Clear fee store
+      }
+    };
+  }, [
+    studentId,
+    fetchStudentPayments,
+    fetchGlobalPayments,
+    fetchStudentFeeData,
+    fetchGlobalFeeData,
+    clearPaymentView, // Use the renamed function
+  ]);
 
   const resetForm = () => {
     setFormData({
@@ -292,7 +312,11 @@ export default function AdminPaymentsPageClient() {
       resetForm();
     } catch (err) {
       setUiError((err as Error).message);
-      fetchPayments({ force: true }); // Rollback on error
+      if (studentId) {
+        fetchStudentPayments(studentId, { force: true });
+      } else {
+        fetchGlobalPayments({ force: true });
+      } // Rollback on error
     } finally {
       setFormLoading(false);
     }
@@ -307,7 +331,11 @@ export default function AdminPaymentsPageClient() {
       setSuccess("Payment deleted successfully!");
     } catch (err) {
       setUiError((err as Error).message);
-      fetchPayments({ force: true }); // Rollback on error
+      if (studentId) {
+        fetchStudentPayments(studentId, { force: true });
+      } else {
+        fetchGlobalPayments({ force: true });
+      } // Rollback on error
     }
   };
 

@@ -1,5 +1,6 @@
 // src\stores\useAttendanceStore.ts
 
+import { FETCH_INTERVAL } from "@/data/constants";
 import { create } from "zustand";
 
 // --- TYPE DEFINITIONS ---
@@ -40,8 +41,6 @@ interface AttendanceState {
   ) => Promise<void>;
 }
 
-const FIVE_MINUTES = 5 * 60 * 1000;
-
 export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   attendance: [],
   loading: false,
@@ -53,7 +52,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     if (
       !options?.force &&
       lastFetched &&
-      new Date().getTime() - lastFetched.getTime() < FIVE_MINUTES
+      new Date().getTime() - lastFetched.getTime() < FETCH_INTERVAL
     ) {
       return;
     }

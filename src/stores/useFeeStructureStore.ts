@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { Recurrence } from "@prisma/client";
+import { FETCH_INTERVAL } from "@/data/constants";
 
 export interface FeeStructure {
   id: string;
@@ -28,8 +29,6 @@ interface FeeStructureState {
   deleteFeeStructure: (id: string) => Promise<void>;
 }
 
-const FIVE_MINUTES = 5 * 60 * 1000;
-
 export const useFeeStructureStore = create<FeeStructureState>((set, get) => ({
   feeStructures: [],
   loading: false,
@@ -42,7 +41,7 @@ export const useFeeStructureStore = create<FeeStructureState>((set, get) => ({
     if (
       !options?.force &&
       lastFetched &&
-      new Date().getTime() - lastFetched.getTime() < FIVE_MINUTES
+      new Date().getTime() - lastFetched.getTime() < FETCH_INTERVAL
     ) {
       return;
     }

@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { Role } from "@prisma/client";
+import { FETCH_INTERVAL } from "@/data/constants";
 
 // --- TYPE DEFINITIONS ---
 export interface Invitation {
@@ -39,8 +40,6 @@ interface InvitationState {
   addInvitation: (data: InvitationData) => Promise<Invitation>;
 }
 
-const FIVE_MINUTES = 5 * 60 * 1000;
-
 export const useInvitationStore = create<InvitationState>((set, get) => ({
   invitations: [],
   loading: false,
@@ -52,7 +51,7 @@ export const useInvitationStore = create<InvitationState>((set, get) => ({
     if (
       !options?.force &&
       lastFetched &&
-      new Date().getTime() - lastFetched.getTime() < FIVE_MINUTES
+      new Date().getTime() - lastFetched.getTime() < FETCH_INTERVAL
     ) {
       return;
     }
