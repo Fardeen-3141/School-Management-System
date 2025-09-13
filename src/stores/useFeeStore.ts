@@ -142,7 +142,54 @@ export const useFeeStore = create<FeeState>((set, get) => ({
 
   // In useFeeStore.ts, update the fetchStudentFeeData function:
   fetchStudentFeeData: async (studentId: string, options) => {
-    const { studentCache } = get();
+    const { studentCache, globalLastFetched, students, allFeeStructures } =
+      get();
+
+    // ✅ NEW: Try to use existing global data first
+    if (
+      !options?.force &&
+      globalLastFetched &&
+      new Date().getTime() - globalLastFetched.getTime() < FETCH_INTERVAL &&
+      students.length > 0 &&
+      allFeeStructures.length > 0
+    ) {
+      const studentFromCache = students.find((s) => s.id === studentId);
+      if (studentFromCache) {
+        console.log(`Using cached global data for student ${studentId}.`);
+
+        // Still need to fetch fee setups (not in global cache)
+        try {
+          const setupsRes = await fetch(
+            `/api/students/${studentId}/fee-setups`
+          );
+          if (setupsRes.ok) {
+            const setupsData = await setupsRes.json();
+
+            set({
+              viewingStudent: studentFromCache,
+              fees: studentFromCache.fees || [],
+              studentFeeSetups: setupsData,
+              studentCache: { studentId, lastFetched: new Date() },
+              loading: false,
+            });
+            return;
+          }
+        } catch {
+          // Fall through to full fetch if setups fetch fails
+        }
+      }
+    }
+
+    // ✅ Existing student-specific cache check
+    if (
+      !options?.force &&
+      studentCache.studentId === studentId &&
+      studentCache.lastFetched &&
+      new Date().getTime() - studentCache.lastFetched.getTime() < FETCH_INTERVAL
+    ) {
+      console.log(`Using cached data for student ${studentId}.`);
+      return;
+    }
 
     if (
       !options?.force &&

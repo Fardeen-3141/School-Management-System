@@ -97,8 +97,29 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
   },
 
   fetchStudentPayments: async (studentId: string, options) => {
-    const { studentCache } = get();
+    const { studentCache, payments, globalLastFetched } = get();
 
+    // ✅ FIRST: Try to use existing global data
+    if (
+      !options?.force &&
+      globalLastFetched &&
+      new Date().getTime() - globalLastFetched.getTime() < FETCH_INTERVAL &&
+      payments.length > 0
+    ) {
+      console.log(`Using cached global data for student ${studentId}.`);
+      const studentInfo = payments.find(
+        (p) => p.student.id === studentId
+      )?.student;
+      set({
+        viewingStudent: studentInfo
+          ? { id: studentInfo.id, name: studentInfo.name }
+          : { id: studentId, name: "Unknown Student" },
+        studentCache: { studentId, lastFetched: new Date() },
+      });
+      return;
+    }
+
+    // ✅ SECOND: Check student-specific cache (your suggested optimization)
     if (
       !options?.force &&
       studentCache.studentId === studentId &&
@@ -109,30 +130,24 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
       return;
     }
 
+    // ✅ THIRD: If no cache available, fetch from API
     set({ loading: true, error: null });
 
     try {
-      // Fetch all payments but set context for student view
       const response = await fetch("/api/payments");
       if (!response.ok) throw new Error("Failed to fetch payments");
       const data: Payment[] = await response.json();
 
-      // Find student info for context
-      const studentPayments = data.filter((p) => p.student.id === studentId);
-      const studentInfo =
-        studentPayments.length > 0
-          ? {
-              id: studentPayments[0].student.id,
-              name: studentPayments[0].student.name,
-            }
-          : { id: studentId, name: "Unknown Student" };
+      const studentInfo = data.find((p) => p.student.id === studentId)?.student;
 
       set({
-        payments: data, // Keep all payments for potential navigation
+        payments: data,
         loading: false,
         studentCache: { studentId, lastFetched: new Date() },
-        viewingStudent: studentInfo,
-        globalLastFetched: null, // Clear global cache
+        viewingStudent: studentInfo
+          ? { id: studentInfo.id, name: studentInfo.name }
+          : { id: studentId, name: "Unknown Student" },
+        globalLastFetched: new Date(),
       });
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
