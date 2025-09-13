@@ -84,8 +84,11 @@ export const DatePicker = ({
   };
 
   const handleDateSelect = (day: number) => {
-    const selectedDate = new Date(currentYear, currentMonth, day);
-    const dateString = selectedDate.toISOString().split("T")[0];
+    // Create date string manually to avoid timezone issues
+    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(
+      2,
+      "0"
+    )}-${String(day).padStart(2, "0")}`;
     onChange(dateString);
     setIsOpen(false);
   };
