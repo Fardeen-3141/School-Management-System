@@ -227,7 +227,7 @@ function generateAllStudentsHTML(
       <body>
         <div class="header">
           <h1>Anipur Adarsha Vidyaniketan HS</h1>
-          <p>Anipur, Vill-Anipur, P.O.-Purbasthali, Dist-Purba Bardhaman, West Bengal, 713513</p>
+          <p>Anipur, P.O.-Anipur, Dist-Sribhumi(Karimganj), Assam, 788734</p>
           <p>All Students Fee Summary</p>
         </div>
         <div class="summary">
