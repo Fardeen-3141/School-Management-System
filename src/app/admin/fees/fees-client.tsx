@@ -150,14 +150,14 @@ export default function AdminFeesPageClient() {
       header: "Student",
       cell: (fee) => (
         <Link
-          href={`/admin/fees?studentId=${fee.student.id}`}
+          href={`/admin/fees?studentId=${fee.student?.id}`}
           className="hover:underline cursor-pointer"
         >
           <div>
-            <div className="font-medium">{fee.student.name}</div>
+            <div className="font-medium">{fee.student?.name}</div>
             <div className="text-sm text-muted-foreground">
-              {fee.student.rollNumber} - {fee.student.class}-
-              {fee.student.section}
+              {fee.student?.rollNumber} - {fee.student?.class}-
+              {fee.student?.section}
             </div>
           </div>
         </Link>
@@ -293,7 +293,7 @@ export default function AdminFeesPageClient() {
         clearStudentView();
       }
     };
-  }, []); // Empty dependency array - only runs on unmount
+  }, [clearStudentView, studentId]); // Empty dependency array - only runs on unmount
 
   const resetForm = () => {
     setFormData({
@@ -578,6 +578,22 @@ export default function AdminFeesPageClient() {
   ).sort();
 
   const finalError = uiError || storeError;
+
+  // In your fees page, before the ResponsiveList component:
+  if (loading && fees.length === 0) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">
+              Loading {studentId ? "student" : "fees"} data...
+            </p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>

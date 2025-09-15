@@ -265,6 +265,7 @@ export default function AdminPaymentsPageClient() {
     fetchStudentFeeData,
     fetchGlobalFeeData,
     clearPaymentView, // Use the renamed function
+    clearStudentView
   ]);
 
   const resetForm = () => {

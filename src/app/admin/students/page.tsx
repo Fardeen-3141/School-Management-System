@@ -54,6 +54,7 @@ import {
   AlertCircle,
   X,
   GraduationCap,
+  Download,
 } from "lucide-react";
 import { UserStatus } from "@prisma/client";
 import Link from "next/link";
@@ -272,6 +273,12 @@ export default function AdminStudentsPage() {
               <Edit className="h-4 w-4 mr-2" />
               Edit Details
             </DropdownMenuItem>
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href={`/api/students/${student.id}/export`} target="_blank">
+                <Download className="h-4 w-4 mr-2" />
+                Export PDF
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>
                 handleStatusChange(
@@ -397,7 +404,7 @@ export default function AdminStudentsPage() {
           address: formData.address || null,
           dateOfBirth: formData.dateOfBirth || null,
         };
-        console.log("Students data", addData)
+        console.log("Students data", addData);
         await addStudent(addData);
         setSuccess("Student created successfully!");
       }
@@ -511,17 +518,25 @@ export default function AdminStudentsPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-2">
           <div>
             <h1 className="text-3xl font-bold">Students Management</h1>
             <p className="text-gray-600">
               Manage student records, profiles, and status
             </p>
           </div>
-          <Button onClick={openCreateDialog} className="cursor-pointer">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Student
-          </Button>
+          <div className="flex flex-col lg:flex-row items-center gap-2">
+            <Link href="/api/students/export-all" target="_blank">
+              <Button variant="outline" className="cursor-pointer tracking-tight">
+                <Download className="h-4 w-4 mr-2" />
+                Export All as PDF
+              </Button>
+            </Link>
+            <Button onClick={openCreateDialog} className="cursor-pointer !px-6">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Student
+            </Button>
+          </div>
         </div>
 
         {finalError && (
