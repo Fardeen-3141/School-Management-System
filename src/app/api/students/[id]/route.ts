@@ -13,9 +13,9 @@ const updateStudentSchema = z.object({
   rollNumber: z.string().min(1),
   guardian: z.string().min(1),
   guardianPhone: z.string().min(1),
-  guardianEmail: z.email().optional(),
+  guardianEmail: z.email().nullable().optional(),
   address: z.string().optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z.string().nullable().optional(),
 });
 
 export async function GET(
@@ -117,21 +117,6 @@ export async function PUT(
 
     if (!existingStudent) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 });
-    }
-
-    // Check if roll number is unique (excluding current student)
-    const rollNumberExists = await prisma.student.findFirst({
-      where: {
-        rollNumber: validatedData.rollNumber,
-        id: { not: id },
-      },
-    });
-
-    if (rollNumberExists) {
-      return NextResponse.json(
-        { error: "Roll number already exists" },
-        { status: 400 }
-      );
     }
 
     // Update student in transaction

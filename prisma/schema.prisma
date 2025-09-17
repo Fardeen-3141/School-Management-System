@@ -90,7 +90,7 @@ model Student {
   name          String
   class         String
   section       String
-  rollNumber    String    @unique
+  rollNumber    String
   guardian      String
   guardianPhone String
   guardianEmail String?

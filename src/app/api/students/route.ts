@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { v4 as uuid } from "uuid";
 
 const createStudentSchema = z.object({
   name: z.string().min(1),
@@ -87,22 +88,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if roll number is unique
-    const existingStudent = await prisma.student.findUnique({
-      where: { rollNumber: validatedData.rollNumber },
-    });
-
-    if (existingStudent) {
-      return NextResponse.json(
-        { error: "Student with this roll number already exists" },
-        { status: 400 }
-      );
-    }
-
     // Generate default password if not provided
     const defaultPassword =
       validatedData.password || `student${validatedData.rollNumber}`;
     const hashedPassword = await bcrypt.hash(defaultPassword, 12);
+
+    const studentId: string = uuid();
 
     // Create user and student in transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -112,7 +103,7 @@ export async function POST(req: NextRequest) {
           name: validatedData.name,
           role: "STUDENT",
           status: "ACTIVE",
-          studentId: validatedData.rollNumber,
+          studentId,
           hashedPassword,
         },
       });

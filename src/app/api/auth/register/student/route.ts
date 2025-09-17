@@ -58,18 +58,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if roll number is unique
-    const existingStudent = await prisma.student.findUnique({
-      where: { rollNumber: validatedData.rollNumber },
-    });
-
-    if (existingStudent) {
-      return NextResponse.json(
-        { error: "Roll number already exists" },
-        { status: 400 }
-      );
-    }
-
     // Hash password
     const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
