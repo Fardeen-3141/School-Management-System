@@ -126,7 +126,6 @@ export async function PUT(
         where: { id: existingStudent.userId },
         data: {
           name: validatedData.name,
-          studentId: validatedData.rollNumber,
         },
       });
 
