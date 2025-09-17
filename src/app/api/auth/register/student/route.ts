@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { v4 as uuid } from "uuid";
 
 const studentRegistrationSchema = z.object({
   name: z.string().min(2),
@@ -64,6 +65,8 @@ export async function POST(req: NextRequest) {
     // Get student data from invitation
     const studentData = invitation.studentData as unknown as StudentData;
 
+    const studentId: string = uuid();
+
     // Create user and student in transaction
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -71,7 +74,7 @@ export async function POST(req: NextRequest) {
           name: validatedData.name,
           email: validatedData.email,
           hashedPassword,
-          studentId: validatedData.rollNumber,
+          studentId,
           role: "STUDENT",
           status: "ACTIVE",
         },
