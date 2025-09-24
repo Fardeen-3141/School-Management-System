@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -55,6 +56,8 @@ import {
   X,
   GraduationCap,
   Download,
+  Loader,
+  Check,
 } from "lucide-react";
 import { UserStatus } from "@prisma/client";
 import Link from "next/link";
@@ -65,6 +68,7 @@ import {
   UpdateStudentData,
 } from "@/stores/useStudentStore";
 import { toast } from "sonner";
+import { DropdownMenuSeparator } from "@radix-ui/react-dropdown-menu";
 
 interface Student {
   id: string;
@@ -158,6 +162,10 @@ export default function AdminStudentsPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [classFilter, setClassFilter] = React.useState("all");
   const [statusFilter, setStatusFilter] = React.useState("all");
+
+  // Export states
+  const [selectedClasses, setSelectedClasses] = React.useState<string[]>([]);
+  const [isExporting, setIsExporting] = React.useState(false);
 
   const [formData, setFormData] = React.useState<StudentFormData>({
     name: "",
@@ -482,6 +490,64 @@ export default function AdminStudentsPage() {
     }
   };
 
+  const handleExport = async (classes: typeof classOptions) => {
+    setIsExporting(true);
+
+    try {
+      const response = await fetch("/api/students/export-all", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ classes }),
+      });
+
+      // --- DEBUGGING STEP ---
+      // Log headers to ensure you're getting a PDF
+      console.log("Response Headers:", response.headers.get("Content-Type"));
+
+      if (!response.ok) {
+        // Try to get more specific error from the backend
+        const errorText = await response.text();
+        console.error("Failed to export PDF:", errorText);
+        toast.error(`Failed to export PDF: ${errorText}`);
+        return;
+      }
+
+      const blob = await response.blob();
+
+      // --- DEBUGGING STEP ---
+      // Check if the received blob is actually a PDF
+      console.log("Blob Details:", { size: blob.size, type: blob.type });
+
+      // If the blob size is small or type is not 'application/pdf', the backend sent an error
+      if (blob.type !== "application/pdf") {
+        toast.error("An error occurred. Server did not return a PDF file.");
+        return;
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      // Dynamic filename based on selection
+      a.download = classes.includes("all")
+        ? `all-students-summary.pdf`
+        : `classes-${classes.join("-")}-summary.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+
+      toast.success("Report downloaded successfully!");
+    } catch (error) {
+      console.error("An unexpected error occurred:", error);
+      toast.error("An unexpected error occurred while exporting.");
+    } finally {
+      setIsExporting(false);
+      setSelectedClasses([]);
+    }
+  };
+
   const calculateTotalFees = (student: Student) => {
     return student.fees?.reduce((total, fee) => total + Number(fee.amount), 0);
   };
@@ -525,14 +591,95 @@ export default function AdminStudentsPage() {
               Manage student records, profiles, and status
             </p>
           </div>
-          <div className="flex flex-col lg:flex-row items-center gap-2">
-            <Link href="/api/students/export-all" target="_blank">
-              <Button variant="outline" className="cursor-pointer tracking-tight">
-                <Download className="h-4 w-4 mr-2" />
-                Export All as PDF
-              </Button>
-            </Link>
-            <Button onClick={openCreateDialog} className="cursor-pointer !px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isExporting}
+                  className="relative min-w-[140px] justify-start font-medium cursor-pointer"
+                >
+                  {isExporting ? (
+                    <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  {isExporting ? "Exporting..." : "Export PDF"}
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="start" className="w-56">
+                <div className="px-3 py-2">
+                  <p className="text-sm font-medium">Export Options</p>
+                  <p className="text-xs text-muted-foreground">
+                    Choose classes to export
+                  </p>
+                </div>
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    handleExport(["all"]);
+                  }}
+                  disabled={isExporting}
+                  className="font-medium cursor-pointer"
+                >
+                  <Check className="h-4 w-4 mr-2 opacity-60" />
+                  Export All Classes
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                <div className="px-3 py-1.5">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Select Classes
+                  </p>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto">
+                  {classOptions.map((cl) => (
+                    <DropdownMenuCheckboxItem
+                      key={cl}
+                      checked={selectedClasses.includes(cl)}
+                      onCheckedChange={() =>
+                        setSelectedClasses((prev) =>
+                          prev.includes(cl)
+                            ? prev.filter((c) => c !== cl)
+                            : [...prev, cl]
+                        )
+                      }
+                      onSelect={(e) => e.preventDefault()}
+                      disabled={isExporting}
+                      className="text-sm cursor-pointer"
+                    >
+                      {cl}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </div>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    handleExport(selectedClasses);
+                  }}
+                  disabled={isExporting || selectedClasses.length === 0}
+                  className="font-medium cursor-pointer"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Selected ({selectedClasses.length})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button
+              onClick={openCreateDialog}
+              size="sm"
+              className="font-medium cursor-pointer"
+            >
               <UserPlus className="h-4 w-4 mr-2" />
               Add Student
             </Button>

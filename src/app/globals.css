@@ -118,3 +118,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Use Playfair Display for headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-playfair);
+  font-weight: 700; /* makes strokes thicker */
+}
+
+/* Use Lora for body text */
+body,
+p,
+.prose {
+  font-family: var(--font-lora);
+  font-weight: 500; /* body text slightly heavier */
+}

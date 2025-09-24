@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import puppeteer from "puppeteer-core";
+import puppeteerCore from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { Decimal } from "@prisma/client/runtime/library";
-import { PaymentType, Student } from "@prisma/client";
+import { PaymentType, Prisma, Student } from "@prisma/client";
+import { z } from "zod";
+
+const exportReportSchema = z.object({
+  classes: z.array(z.string()),
+});
 
 type StudentSummary = Student & {
   totalFees: Decimal;
@@ -20,21 +25,68 @@ interface SchoolSummary {
   totalDue: Decimal;
 }
 
+/**
+ * Helper: returns an already-launched browser.
+ * - On Vercel (serverless) -> use puppeteer-core + @sparticuz/chromium
+ * - Locally -> dynamically import full puppeteer (devDependency) so you have bundled Chromium
+ */
+async function getBrowser() {
+  if (process.env.NODE_ENV === "production") {
+    // Production/serverless: use puppeteer-core + sparticuz chromium binary
+    return await puppeteerCore.launch({
+      args: [...chromium.args, "--no-sandbox", "--disable-setuid-sandbox"],
+      executablePath: await chromium.executablePath(),
+      headless: true,
+    });
+  } else {
+    // Local development: dynamically import full puppeteer (devDependency)
+    const puppeteer = await import("puppeteer");
+    return await puppeteer.default.launch({
+      headless: true,
+      // include sandbox flags for parity with serverless if you want
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  }
+}
+
 // Main function to handle the GET request
-export async function GET(_req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "ADMIN") {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // 1. Fetch Data
-    const students = await prisma.student.findMany({
+    const data = await req.json();
+    const validatedData = exportReportSchema.parse(data);
+
+    const exportAll = validatedData.classes[0] === "all";
+
+    // 1. Define query arguments with a conditional where clause
+    const findManyArgs = {
+      // If fetchAll is true, where is undefined (or an empty object), fetching all students.
+      // Otherwise, filter for students where className is in the provided array.
+      where: !exportAll
+        ? {
+            class: {
+              // IMPORTANT: Ensure 'className' is the correct field in your Student model
+              in: validatedData.classes,
+            },
+          }
+        : undefined,
       include: {
         fees: { select: { amount: true } },
         payments: { select: { amount: true, type: true } },
       },
-    });
+    };
+
+    // Correctly infer the student type from the query arguments
+    type StudentWithRelations = Prisma.StudentGetPayload<typeof findManyArgs>;
+
+    // 2. Fetch Data using the defined arguments
+    const students: StudentWithRelations[] = await prisma.student.findMany(
+      findManyArgs
+    );
 
     // 2. Process and Sort Data
     const processedStudents: StudentSummary[] = students.map((student) => {
@@ -75,7 +127,7 @@ export async function GET(_req: NextRequest) {
     const totalDue = schoolSummary.totalFees.minus(schoolSummary.totalPaid);
 
     // 3. Generate HTML
-    const htmlContent = generateAllStudentsHTML(sortedStudents, {
+    const htmlContent = generateAllStudentsHTML(exportAll, sortedStudents, {
       ...schoolSummary,
       totalDue,
     });
@@ -89,14 +141,13 @@ export async function GET(_req: NextRequest) {
         </div>
       `;
 
-    // 4. Generate PDF using Puppeteer
-    const browser = await puppeteer.launch({
-      args: [...chromium.args, "--no-sandbox", "--disable-setuid-sandbox"],
-      executablePath: await chromium.executablePath(),
-      headless: true,
-    });
+    // 4. Generate PDF using Puppeteer (uses getBrowser which handles both envs)
+    const browser = await getBrowser();
     const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    await page.setContent(htmlContent, {
+      waitUntil: "networkidle0",
+      timeout: 60000,
+    });
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -119,8 +170,11 @@ export async function GET(_req: NextRequest) {
         "Content-Disposition": `attachment; filename="all-students-summary.pdf"`,
       },
     });
-  } catch (error) {
-    console.error("Error generating global PDF:", error);
+  } catch (error: unknown) {
+    console.error("Error generating PDF:", error);
+    if (error instanceof z.ZodError) {
+      return new NextResponse("Invalid request data", { status: 400 });
+    }
     return new NextResponse("Error generating PDF", { status: 500 });
   }
 }
@@ -161,17 +215,33 @@ function customSortStudents(students: StudentSummary[]): StudentSummary[] {
 }
 
 // --- HTML Generation ---
-
 function generateAllStudentsHTML(
+  allStudents: boolean = false,
   students: StudentSummary[],
   summary: SchoolSummary
 ): string {
   const formatCurrency = (amount: Decimal) =>
     `₹${amount.toFixed(2).toLocaleString()}`;
 
+  let prevClass = ""; // track previous class
+
   const tableRows = students
-    .map(
-      (student) => `
+    .map((student) => {
+      let classHeader = "";
+
+      // If class changed, insert a header row
+      if (student.class !== prevClass) {
+        prevClass = student.class;
+        classHeader = `
+        <tr class="class-header">
+          <td colspan="5" style="font-weight:bold; padding:8px 0;">
+            Class: ${student.class} - ${student.section}
+          </td>
+        </tr>
+      `;
+      }
+
+      return `${classHeader}
       <tr>
         <td>
           <div class="student-name">${student.name}</div>
@@ -187,9 +257,8 @@ function generateAllStudentsHTML(
           student.totalDiscounted
         )}</td>
         <td class="text-right text-red">${formatCurrency(student.totalDue)}</td>
-      </tr>
-    `
-    )
+      </tr>`;
+    })
     .join("");
 
   return `
@@ -197,7 +266,7 @@ function generateAllStudentsHTML(
       <html>
       <head>
         <meta charset="utf-8">
-        <title>All Students Fee Summary</title>
+        <title>Students' Fee Summary</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, san-serif; margin: 0; padding: 0; font-size: 11px; color: #333; }
           .header { text-align: center; margin-bottom: 25px; }
@@ -228,7 +297,13 @@ function generateAllStudentsHTML(
         <div class="header">
           <h1>Anipur Adarsha Vidyaniketan HS</h1>
           <p>Anipur, P.O.-Anipur, Dist-Sribhumi(Karimganj), Assam, 788734</p>
-          <p>All Students Fee Summary</p>
+          <p>${
+            allStudents
+              ? "All Students Fee Summary"
+              : `Fee summary of ${[
+                  ...new Set(students.map((s) => s.class)),
+                ].join(", ")}`
+          }</p>
         </div>
         <div class="summary">
           <div class="summary-item">
