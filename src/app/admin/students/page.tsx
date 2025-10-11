@@ -586,19 +586,15 @@ export default function AdminStudentsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center gap-2">
           <div>
-            <h1 className="text-3xl font-bold">Students Management</h1>
-            <p className="text-gray-600">
-              Manage student records, profiles, and status
-            </p>
+            <h1 className="text-xl !font-medium">Students Management</h1>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant="outline"
                   size="sm"
                   disabled={isExporting}
-                  className="relative min-w-[140px] justify-start font-medium cursor-pointer"
+                  className="p-6 border-none relative min-w-[140px] justify-start font-medium cursor-pointer"
                 >
                   {isExporting ? (
                     <Loader className="h-4 w-4 mr-2 animate-spin" />
@@ -609,7 +605,10 @@ export default function AdminStudentsPage() {
                 </Button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuContent
+                align="start"
+                className="w-56 border-none bg-popover"
+              >
                 <div className="px-3 py-2">
                   <p className="text-sm font-medium">Export Options</p>
                   <p className="text-xs text-muted-foreground">
@@ -678,7 +677,7 @@ export default function AdminStudentsPage() {
             <Button
               onClick={openCreateDialog}
               size="sm"
-              className="font-medium cursor-pointer"
+              className="p-6 font-medium cursor-pointer"
             >
               <UserPlus className="h-4 w-4 mr-2" />
               Add Student
@@ -702,7 +701,7 @@ export default function AdminStudentsPage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <Card>
+          <Card className="shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Total Students
@@ -713,7 +712,7 @@ export default function AdminStudentsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Active Students
@@ -729,7 +728,7 @@ export default function AdminStudentsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Pending Students
@@ -746,7 +745,7 @@ export default function AdminStudentsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Classes</CardTitle>
             </CardHeader>
@@ -757,7 +756,7 @@ export default function AdminStudentsPage() {
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="shadow-none border-none">
           <CardContent className="p-4">
             <div className="flex flex-wrap gap-4">
               <div className="flex-1 min-w-64">
@@ -767,17 +766,17 @@ export default function AdminStudentsPage() {
                     placeholder="Search students..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 border-none"
                   />
                 </div>
               </div>
 
               <div className="flex grow gap-4">
                 <Select value={classFilter} onValueChange={setClassFilter}>
-                  <SelectTrigger className="flex-1 cursor-pointer">
+                  <SelectTrigger className="flex-1 cursor-pointer border-none">
                     <SelectValue placeholder="Filter by Class" />
                   </SelectTrigger>
-                  <SelectContent>
+                   <SelectContent className="border-none">
                     <SelectItem value="all" className="cursor-pointer">
                       All Classes
                     </SelectItem>
@@ -794,10 +793,10 @@ export default function AdminStudentsPage() {
                 </Select>
 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="flex-1 cursor-pointer">
+                  <SelectTrigger className="flex-1 cursor-pointer border-none">
                     <SelectValue placeholder="Filter by Status" />
                   </SelectTrigger>
-                  <SelectContent>
+                   <SelectContent className="border-none">
                     <SelectItem value="all" className="cursor-pointer">
                       All Status
                     </SelectItem>
@@ -821,19 +820,28 @@ export default function AdminStudentsPage() {
         </Card>
 
         {/* Students Table */}
-        <ResponsiveList
-          columns={columns}
-          data={filteredStudents}
-          loading={loading}
-          rowKey="id"
-          emptyState={
-            <div className="text-center py-8 text-gray-500">
-              {searchQuery || classFilter !== "all" || statusFilter !== "all"
-                ? "No students found matching your filters."
-                : "No students found. Create some students to get started."}
-            </div>
-          }
-        />
+        <Card className="shadow-none border-none">
+          <CardHeader>
+            <CardTitle>Students</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveList
+              columns={columns}
+              data={filteredStudents}
+              loading={loading}
+              rowKey="id"
+              emptyState={
+                <div className="text-center py-8 text-gray-500">
+                  {searchQuery ||
+                  classFilter !== "all" ||
+                  statusFilter !== "all"
+                    ? "No students found matching your filters."
+                    : "No students found. Create some students to get started."}
+                </div>
+              }
+            />
+          </CardContent>
+        </Card>
 
         {/* Add/Edit Student Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -1006,7 +1014,7 @@ export default function AdminStudentsPage() {
                         <SelectTrigger className="h-11">
                           <SelectValue placeholder="Select a class" />
                         </SelectTrigger>
-                        <SelectContent>
+                         <SelectContent className="border-none">
                           {classOptions.map((option) => (
                             <SelectItem key={option} value={option}>
                               {option}
@@ -1035,7 +1043,7 @@ export default function AdminStudentsPage() {
                         <SelectTrigger className="h-11">
                           <SelectValue placeholder="Select a section" />
                         </SelectTrigger>
-                        <SelectContent>
+                         <SelectContent className="border-none">
                           {sectionOptions.map((option) => (
                             <SelectItem key={option} value={option}>
                               {option}

@@ -101,13 +101,13 @@ export default function AdminDashboard() {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-start items-center">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl !font-medium ml-2">Dashboard</h1>
         </div>
 
         {/* Dashboard Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Students */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Students
@@ -131,7 +131,7 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Total Fees */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Fees
@@ -168,7 +168,7 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Collections */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Collections
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Outstanding */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Outstanding
@@ -250,7 +250,7 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        <Card>
+        <Card className="shadow-none border-none">
           <CardHeader>
             <CardTitle>Students</CardTitle>
           </CardHeader>

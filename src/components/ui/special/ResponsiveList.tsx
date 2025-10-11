@@ -85,7 +85,7 @@ export function ResponsiveList<T>({
       return (
         <div className="space-y-4">
           {[...Array(Math.min(skeletonRows, 4))].map((_, i) => (
-            <Card key={i} className="overflow-hidden">
+            <Card key={i} className="overflow-hidden shadow-none border-none">
               <CardContent className="p-0">
                 {/* Card header skeleton */}
                 <div className="bg-muted/30 p-4 border-b border-border/50">
@@ -129,7 +129,7 @@ export function ResponsiveList<T>({
 
     // Enhanced desktop skeleton with proper proportions
     return (
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden shadow-none border-none">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -184,11 +184,11 @@ export function ResponsiveList<T>({
           return (
             <Card
               key={String(item[rowKey])}
-              className="overflow-hidden hover:shadow-md transition-shadow duration-200"
+              className="overflow-hidden hover:shadow-md transition-shadow duration-200 shadow-none border-none"
             >
               <CardContent className="px-3 py-2">
                 {/* Card Header - Primary content */}
-                <div className="bg-muted/20 p-4 border-b border-border/50">
+                <div className="p-4 border-b border-border/50">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">{primaryContent}</div>
                     {/* Show status/badge if available */}
@@ -237,7 +237,7 @@ export function ResponsiveList<T>({
                           key={String(column.accessorKey)}
                           className="flex items-start justify-between text-sm"
                         >
-                          <span className="flex-2 font-medium text-muted-foreground min-w-0 flex-shrink-0">
+                          <span className="flex-2 font-medium text-card-foreground min-w-0 flex-shrink-0">
                             {column.header}:
                           </span>
                           <span className="flex-2 ml-4 text-left min-w-0">
@@ -274,7 +274,7 @@ export function ResponsiveList<T>({
 
   // --- DESKTOP TABLE VIEW ---
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden shadow-none border-none">
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -283,7 +283,7 @@ export function ResponsiveList<T>({
                 <TableHead
                   key={String(column.accessorKey)}
                   className={cn(
-                    "h-12 font-semibold bg-muted/30 text-muted-foreground",
+                    "h-12 font-semibold text-card-foreground/80",
                     column.className
                   )}
                 >

@@ -152,7 +152,7 @@ export default function AdminAttendancePage() {
           <SelectTrigger className="w-32 cursor-pointer">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+           <SelectContent className="border-none">
             <SelectItem value="PRESENT" className="cursor-pointer">
               Present
             </SelectItem>
@@ -372,8 +372,8 @@ export default function AdminAttendancePage() {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
+          <div className="ml-2">
+            <h1 className="text-xl !font-medium">
               Attendance Management
             </h1>
             <p className="text-gray-600">
@@ -418,7 +418,7 @@ export default function AdminAttendancePage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-          <Card>
+          <Card className="shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Present Today
@@ -431,7 +431,7 @@ export default function AdminAttendancePage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Absent Today
@@ -444,7 +444,7 @@ export default function AdminAttendancePage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Late Today</CardTitle>
               <Clock className="h-4 w-4 text-yellow-600" />
@@ -455,7 +455,7 @@ export default function AdminAttendancePage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Attendance Rate
@@ -468,7 +468,7 @@ export default function AdminAttendancePage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Total Marked
@@ -482,7 +482,7 @@ export default function AdminAttendancePage() {
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="shadow-none border-none">
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row flex-wrap grow gap-4">
               <div className="flex-1 flex gap-4">
@@ -493,17 +493,17 @@ export default function AdminAttendancePage() {
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full"
+                    className="w-full border-none"
                   />
                 </div>
 
                 <div className="flex-1">
                   <Label>Class</Label>
                   <Select value={classFilter} onValueChange={setClassFilter}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full border-none">
                       <SelectValue placeholder="Class" />
                     </SelectTrigger>
-                    <SelectContent>
+                     <SelectContent className="border-none">
                       <SelectItem value="all">All</SelectItem>
                       {uniqueClasses.map((cls) => (
                         <SelectItem key={cls} value={cls}>
@@ -522,10 +522,10 @@ export default function AdminAttendancePage() {
                     value={sectionFilter}
                     onValueChange={setSectionFilter}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full border-none">
                       <SelectValue placeholder="Section" />
                     </SelectTrigger>
-                    <SelectContent>
+                     <SelectContent className="border-none">
                       <SelectItem value="all">All</SelectItem>
                       {uniqueSections.map((section) => (
                         <SelectItem key={section} value={section}>
@@ -539,10 +539,10 @@ export default function AdminAttendancePage() {
                 <div className="flex-1">
                   <Label>Status</Label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full border-none">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
-                    <SelectContent>
+                     <SelectContent className="border-none">
                       <SelectItem value="all">All</SelectItem>
                       <SelectItem value="PRESENT">Present</SelectItem>
                       <SelectItem value="ABSENT">Absent</SelectItem>
@@ -587,7 +587,7 @@ export default function AdminAttendancePage() {
                     <SelectTrigger className="cursor-pointer w-full">
                       <SelectValue placeholder="Select class" />
                     </SelectTrigger>
-                    <SelectContent>
+                     <SelectContent className="border-none">
                       {uniqueClasses.map((cls) => (
                         <SelectItem
                           key={cls}
@@ -610,7 +610,7 @@ export default function AdminAttendancePage() {
                     <SelectTrigger className="cursor-pointer w-full">
                       <SelectValue placeholder="All sections" />
                     </SelectTrigger>
-                    <SelectContent>
+                     <SelectContent className="border-none">
                       <SelectItem value="all" className="cursor-pointer">
                         All Sections
                       </SelectItem>
@@ -692,7 +692,7 @@ export default function AdminAttendancePage() {
 
               {/* Students List */}
               {bulkAttendanceData.length > 0 && (
-                <Card>
+                <Card className="shadow-none border-none">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg">
                       Students ({bulkAttendanceData.length})
@@ -737,7 +737,7 @@ export default function AdminAttendancePage() {
                                 <SelectTrigger className="w-28 cursor-pointer">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                 <SelectContent className="border-none">
                                   <SelectItem
                                     value="PRESENT"
                                     className="cursor-pointer"

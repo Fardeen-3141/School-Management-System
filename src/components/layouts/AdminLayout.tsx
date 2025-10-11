@@ -22,6 +22,7 @@ import {
   LogOut,
 } from "lucide-react";
 import Logo from "../ui/special/Logo";
+import ThemeToggle from "../ui/special/ThemeSwitch";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -68,10 +69,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             href={item.href}
             onClick={mobile ? closeSidebar : undefined}
             className={cn(
-              "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
               isActive
                 ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                : "text-card-foreground hover:bg-accent hover:text-accent-foreground"
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
@@ -84,11 +85,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // User section component
   const UserSection = () => (
-    <div className="border-t border-border p-4">
+    <div className="p-4">
       <div className="flex items-center gap-3 mb-3">
         <Avatar className="h-8 w-8">
           <AvatarImage src={session?.user?.image || ""} />
-          <AvatarFallback className="bg-muted text-muted-foreground">
+          <AvatarFallback className="bg-background text-foreground">
             {session?.user?.name?.[0] || session?.user?.email?.[0] || "U"}
           </AvatarFallback>
         </Avatar>
@@ -105,7 +106,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         onClick={() => signOut()}
         variant="outline"
         size="sm"
-        className="w-full justify-start gap-2 cursor-pointer"
+        className="w-full p-6 justify-start gap-2 cursor-pointer border-none"
       >
         <LogOut className="h-4 w-4" />
         Sign out
@@ -117,14 +118,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
     <div
       className={cn(
-        "flex h-full w-64 flex-col bg-card border-r border-border",
+        "flex h-full w-64 flex-col bg-card",
         mobile &&
           "fixed left-0 top-0 z-40 transform transition-transform duration-300 ease-in-out",
         mobile && (sidebarOpen ? "translate-x-0" : "-translate-x-full")
       )}
     >
       {/* Header */}
-      <div className="flex h-20 items-center gap-2 border-b border-border px-2 md:px-4">
+      <div className="flex h-20 items-center gap-2 px-2 md:px-4">
         <div className="flex items-center gap-2 font-semibold">
           <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
             <LayoutDashboard className="h-4 w-4 text-primary-foreground" />
@@ -149,6 +150,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <NavigationItems mobile={mobile} />
       </div>
 
+      <ThemeToggle />
+
       {/* User section */}
       <UserSection />
     </div>
@@ -170,9 +173,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden bg-card">
+        {/*bg-card allows main content round and distinct*/}
         {/* Top bar */}
-        <header className="flex h-20 items-center gap-4 border-b border-border bg-card px-6">
+        <header className="flex h-20 items-center gap-4 bg-card px-6">
           <Button
             onClick={() => setSidebarOpen(true)}
             variant="outline"
@@ -186,23 +190,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex-1">
             <Logo />
           </div>
-
-          {/* Desktop user info */}
-          <div className="hidden sm:flex items-center gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={session?.user?.image || ""} />
-              <AvatarFallback className="bg-muted text-muted-foreground">
-                {session?.user?.name?.[0] || session?.user?.email?.[0] || "U"}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm text-muted-foreground">
-              {session?.user?.name || session?.user?.email}
-            </span>
-          </div>
         </header>
-
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-muted/30 p-6">
+        <main className="flex-1 overflow-y-auto bg-background p-6 lg:rounded-xl">
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>

@@ -265,7 +265,7 @@ export default function AdminPaymentsPageClient() {
     fetchStudentFeeData,
     fetchGlobalFeeData,
     clearPaymentView, // Use the renamed function
-    clearStudentView
+    clearStudentView,
   ]);
 
   const resetForm = () => {
@@ -415,7 +415,7 @@ export default function AdminPaymentsPageClient() {
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div>
-                  <CardTitle className="text-2xl">
+                  <CardTitle className="text-xl">
                     Payment History: {viewingStudent.name}
                   </CardTitle>
                   <p className="text-sm text-gray-600 mt-1">
@@ -428,15 +428,12 @@ export default function AdminPaymentsPageClient() {
                     href={`/admin/fees?studentId=${viewingStudent.id}`}
                     className="flex-1"
                   >
-                    <Button
-                      variant="secondary"
-                      className="w-full cursor-pointer"
-                    >
+                    <Button className="w-full p-6 cursor-pointer">
                       View Fee Ledger
                     </Button>
                   </Link>
                   <Link href="/admin/payments" className="flex-1">
-                    <Button variant="outline" className="w-full cursor-pointer">
+                    <Button className="w-full p-6 cursor-pointer">
                       &larr; All Payments
                     </Button>
                   </Link>
@@ -450,17 +447,14 @@ export default function AdminPaymentsPageClient() {
           <div>
             {!viewingStudent && (
               <>
-                <h1 className="text-2xl md:text-3xl font-bold">
+                <h1 className="text-xl !font-medium">
                   Payments Management
                 </h1>
-                <p className="text-gray-600">
-                  Record and manage student fee payments
-                </p>
               </>
             )}
           </div>
 
-          <Button onClick={openCreateDialog} className="cursor-pointer">
+          <Button onClick={openCreateDialog} className="p-6 cursor-pointer">
             <Plus className="h-4 w-4 mr-2" />
             Record Payment
           </Button>
@@ -485,7 +479,7 @@ export default function AdminPaymentsPageClient() {
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Fees Overview */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Fees
@@ -508,7 +502,7 @@ export default function AdminPaymentsPageClient() {
           </Card>
 
           {/* Collections */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Collections
@@ -531,7 +525,7 @@ export default function AdminPaymentsPageClient() {
           </Card>
 
           {/* Today's Collection */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Today&apos;s Collection
@@ -551,7 +545,7 @@ export default function AdminPaymentsPageClient() {
           </Card>
 
           {/* Transactions */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Completed Payments
@@ -572,7 +566,7 @@ export default function AdminPaymentsPageClient() {
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="shadow-none border-none">
           <CardContent className="p-4">
             <div className="flex flex-wrap gap-4">
               <div className="flex-2 min-w-64">
@@ -582,17 +576,17 @@ export default function AdminPaymentsPageClient() {
                     placeholder="Search payments..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 border-none"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col grow md:flex-row items-center gap-4">
                 <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger className="flex-1 cursor-pointer">
+                  <SelectTrigger className="flex-1 cursor-pointer border-none">
                     <SelectValue placeholder="Filter by Date" />
                   </SelectTrigger>
-                  <SelectContent>
+                   <SelectContent className="border-none">
                     <SelectItem value="all" className="cursor-pointer">
                       All Time
                     </SelectItem>
@@ -613,19 +607,26 @@ export default function AdminPaymentsPageClient() {
         </Card>
 
         {/* Payments Table */}
-        <ResponsiveList
-          columns={columns}
-          data={filteredPayments}
-          loading={isLoading}
-          rowKey="id"
-          emptyState={
-            <div className="text-center py-8 text-gray-500">
-              {searchQuery || dateFilter !== "all"
-                ? "No payments found matching your filters."
-                : "No payments recorded yet."}
-            </div>
-          }
-        />
+        <Card className="shadow-none border-none">
+          <CardHeader>
+            <CardTitle>Payments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveList
+              columns={columns}
+              data={filteredPayments}
+              loading={isLoading}
+              rowKey="id"
+              emptyState={
+                <div className="text-center py-8 text-gray-500">
+                  {searchQuery || dateFilter !== "all"
+                    ? "No payments found matching your filters."
+                    : "No payments recorded yet."}
+                </div>
+              }
+            />
+          </CardContent>
+        </Card>
 
         {/* Add/Edit Payment Dialog */}
         <div className="">
@@ -690,7 +691,7 @@ export default function AdminPaymentsPageClient() {
                       <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
                         <SelectValue placeholder="Choose a student..." />
                       </SelectTrigger>
-                      <SelectContent>
+                       <SelectContent className="border-none">
                         {students.map((student) => (
                           <SelectItem
                             key={student.id}
@@ -739,7 +740,7 @@ export default function AdminPaymentsPageClient() {
                         <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
                           <SelectValue placeholder="Select fee type or leave empty for general payment" />
                         </SelectTrigger>
-                        <SelectContent>
+                         <SelectContent className="border-none">
                           {availableFees.map((fee) => {
                             const totalPaid = fee.payments.reduce(
                               (sum, p) => sum + p.amount,

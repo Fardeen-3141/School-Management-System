@@ -599,11 +599,11 @@ export default function AdminFeesPageClient() {
     <AdminLayout>
       <div className="space-y-6">
         {viewingStudent && (
-          <Card className="mb-6">
+          <Card className="mb-6 shadow-none border-none">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div>
-                  <CardTitle className="text-2xl">
+                  <CardTitle className="text-xl">
                     Fee Ledger: {viewingStudent.name}
                   </CardTitle>
                   <p className="text-sm text-gray-600 mt-1">
@@ -616,15 +616,12 @@ export default function AdminFeesPageClient() {
                     href={`/admin/payments?studentId=${viewingStudent.id}`}
                     className="flex-1"
                   >
-                    <Button
-                      variant="secondary"
-                      className="w-full cursor-pointer"
-                    >
+                    <Button className="w-full p-6 cursor-pointer">
                       View Payment History
                     </Button>
                   </Link>
                   <Link href="/admin/fees" className="flex-1">
-                    <Button variant="outline" className="w-full cursor-pointer">
+                    <Button className="w-full p-6 cursor-pointer">
                       &larr; All Fees
                     </Button>
                   </Link>
@@ -636,7 +633,7 @@ export default function AdminFeesPageClient() {
 
         {/* Card for Managing Fee Rules */}
         {viewingStudent && (
-          <Card>
+          <Card className="shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="space-y-1">
                 <CardTitle>Recurring Fee Rules</CardTitle>
@@ -645,7 +642,7 @@ export default function AdminFeesPageClient() {
                 </p>
               </div>
               <Button
-                className="cursor-pointer"
+                className="p-6 cursor-pointer bg-primary text-primary-foreground"
                 onClick={() => {
                   setIsEditingSetup(false);
                   setSetupFormData({ feeStructureId: "", customAmount: "" });
@@ -757,21 +754,16 @@ export default function AdminFeesPageClient() {
           </Card>
         )}
 
-        <h2 className="text-xl font-bold pt-4">Generated Fee Ledger</h2>
-
         <div className="flex justify-between items-center">
-          <div>
+          <div className="ml-2">
             {/* Hide the main title if viewing a student */}
             {!viewingStudent && (
               <>
-                <h1 className="text-3xl font-bold">Fees Management</h1>
-                <p className="text-gray-600">
-                  Manage student fees, dues, and payment tracking
-                </p>
+                <h1 className="text-xl !font-medium">Fees Management</h1>
               </>
             )}
           </div>
-          <Button onClick={openCreateDialog} className="cursor-pointer">
+          <Button onClick={openCreateDialog} className="p-6 cursor-pointer">
             <Plus className="h-4 w-4 mr-2" />
             Create Fee
           </Button>
@@ -796,7 +788,7 @@ export default function AdminFeesPageClient() {
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Fees Generated */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Fees Generated
@@ -819,7 +811,7 @@ export default function AdminFeesPageClient() {
           </Card>
 
           {/* Collections */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Collections
@@ -842,7 +834,7 @@ export default function AdminFeesPageClient() {
           </Card>
 
           {/* Total Pending */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Pending
@@ -865,7 +857,7 @@ export default function AdminFeesPageClient() {
           </Card>
 
           {/* Overdue Fees */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-none border-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Overdue Fees
@@ -888,7 +880,7 @@ export default function AdminFeesPageClient() {
 
         {/* Filters */}
         {!viewingStudent && (
-          <Card>
+          <Card className="shadow-none border-none">
             <CardContent className="p-4">
               <div className="flex flex-wrap gap-4">
                 <div className="flex-1 min-w-64">
@@ -898,17 +890,17 @@ export default function AdminFeesPageClient() {
                       placeholder="Search fees..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 border-none"
                     />
                   </div>
                 </div>
 
                 <div className="flex grow gap-4">
                   <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="flex-1 cursor-pointer">
+                    <SelectTrigger className="flex-1 cursor-pointer border-none">
                       <SelectValue placeholder="Filter by Type" />
                     </SelectTrigger>
-                    <SelectContent>
+                     <SelectContent className="border-none">
                       <SelectItem value="all" className="cursor-pointer">
                         All Types
                       </SelectItem>
@@ -925,10 +917,10 @@ export default function AdminFeesPageClient() {
                   </Select>
 
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="flex-1 cursor-pointer">
+                    <SelectTrigger className="flex-1 cursor-pointer border-none">
                       <SelectValue placeholder="Filter by Status" />
                     </SelectTrigger>
-                    <SelectContent>
+                     <SelectContent className="border-none">
                       <SelectItem value="all" className="cursor-pointer">
                         All Status
                       </SelectItem>
@@ -950,19 +942,26 @@ export default function AdminFeesPageClient() {
         )}
 
         {/* Fees Table */}
-        <ResponsiveList
-          columns={feeColumns}
-          data={filteredFees}
-          loading={loading}
-          rowKey="id"
-          emptyState={
-            <div className="text-center py-8 text-gray-500">
-              {searchQuery || statusFilter !== "all" || typeFilter !== "all"
-                ? "No fees found matching your filters."
-                : "No fees have been generated yet."}
-            </div>
-          }
-        />
+        <Card className="shadow-none border-none">
+          <CardHeader>
+            <CardTitle>Fees</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveList
+              columns={feeColumns}
+              data={filteredFees}
+              loading={loading}
+              rowKey="id"
+              emptyState={
+                <div className="text-center py-8 text-gray-500">
+                  {searchQuery || statusFilter !== "all" || typeFilter !== "all"
+                    ? "No fees found matching your filters."
+                    : "No fees have been generated yet."}
+                </div>
+              }
+            />
+          </CardContent>
+        </Card>
 
         {/* Add/Edit Fee Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -1133,7 +1132,7 @@ export default function AdminFeesPageClient() {
                               <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
                                 <SelectValue placeholder="Select class" />
                               </SelectTrigger>
-                              <SelectContent>
+                               <SelectContent className="border-none">
                                 {uniqueClasses.map((cls) => (
                                   <SelectItem
                                     key={cls}
@@ -1202,7 +1201,7 @@ export default function AdminFeesPageClient() {
                           <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
                             <SelectValue placeholder="Select student" />
                           </SelectTrigger>
-                          <SelectContent>
+                           <SelectContent className="border-none">
                             {students.map((student) => (
                               <SelectItem
                                 key={student.id}
@@ -1336,7 +1335,7 @@ export default function AdminFeesPageClient() {
                     <SelectTrigger className="cursor-pointer">
                       <SelectValue placeholder="Select a fee structure..." />
                     </SelectTrigger>
-                    <SelectContent>
+                     <SelectContent className="border-none">
                       {allFeeStructures
                         .filter(
                           (s) =>

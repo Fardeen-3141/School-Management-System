@@ -218,8 +218,8 @@ export default function InvitationManagement() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Invitation Management</h1>
+        <div className="ml-2">
+          <h1 className="text-xl !font-medium">Invitation Management</h1>
           <p className="text-gray-600">
             Create and manage invitations for new users
           </p>
@@ -242,13 +242,13 @@ export default function InvitationManagement() {
         )}
 
         {/* Create Invitation Form */}
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader className="pb-6 border-b border-gray-100">
-            <CardTitle className="flex items-center gap-2 text-2xl font-semibold text-gray-900">
-              <UserPlus className="h-6 w-6 text-blue-600" />
+        <Card className="shadow-none border-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-2xl font-semibold text-card-foreground">
+              <UserPlus className="h-6 w-6 text-card-foreground" />
               Create New Invitation
             </CardTitle>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-card-foreground/60 mt-1">
               Send an invitation to join the platform
             </p>
           </CardHeader>
@@ -269,9 +269,9 @@ export default function InvitationManagement() {
               <div className="space-y-2">
                 <Label
                   htmlFor="email"
-                  className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                  className="flex items-center gap-2 text-sm !font-normal text-card-foreground/80"
                 >
-                  <Mail className="h-4 w-4 text-gray-500" />
+                  <Mail className="h-4 w-4 text-card-foreground/60" />
                   Email Address *
                 </Label>
                 <Input
@@ -286,7 +286,7 @@ export default function InvitationManagement() {
                   }
                   required
                   placeholder="Enter email address"
-                  className="h-11"
+                  className="h-11 border-none"
                 />
               </div>
 
@@ -294,9 +294,9 @@ export default function InvitationManagement() {
               <div className="space-y-2">
                 <Label
                   htmlFor="role"
-                  className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                  className="flex items-center gap-2 text-sm !font-normal text-card-foreground/80"
                 >
-                  <Users className="h-4 w-4 text-gray-500" />
+                  <Users className="h-4 w-4 text-card-foreground/60" />
                   Role *
                 </Label>
                 <Select
@@ -305,16 +305,16 @@ export default function InvitationManagement() {
                     setFormData((prev) => ({ ...prev, role: value as Role }))
                   }
                 >
-                  <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
+                  <SelectTrigger className="h-11 p-6 cursor-pointer hover:bg-muted/50 transition-colors border-none">
                     <SelectValue placeholder="Select user role" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover border-none">
                     <SelectItem value="STUDENT" className="cursor-pointer py-3">
                       <div className="flex items-center gap-3">
                         <GraduationCap className="h-4 w-4 text-blue-600" />
                         <div className="flex flex-col">
                           <span className="font-medium">Student</span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-popover-foreground/60">
                             Regular student account
                           </span>
                         </div>
@@ -325,7 +325,7 @@ export default function InvitationManagement() {
                         <Shield className="h-4 w-4 text-green-600" />
                         <div className="flex flex-col">
                           <span className="font-medium">Admin</span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-popover-foreground/60">
                             Administrative privileges
                           </span>
                         </div>
@@ -337,10 +337,10 @@ export default function InvitationManagement() {
 
               {/* Student-specific fields */}
               {formData.role === "STUDENT" && (
-                <div className="space-y-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="space-y-6 p-4 bg-background rounded-lg">
                   <div className="flex items-center gap-2 mb-4">
                     <GraduationCap className="h-5 w-5 text-blue-600" />
-                    <h3 className="text-lg font-medium text-gray-900">
+                    <h3 className="text-lg font-medium text-foreground">
                       Student Information
                     </h3>
                   </div>
@@ -350,9 +350,9 @@ export default function InvitationManagement() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="class"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm !font-normal text-card-foreground/80"
                       >
-                        <Book className="h-4 w-4 text-gray-500" />
+                        <Book className="h-4 w-4 text-card-foreground/60" />
                         Class *
                       </Label>
                       <Input
@@ -366,16 +366,16 @@ export default function InvitationManagement() {
                           }))
                         }
                         required
-                        className="h-11"
+                        className="h-11 border-none"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label
                         htmlFor="section"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm !font-normal text-card-foreground/80"
                       >
-                        <SquareStack className="h-4 w-4 text-gray-500" />
+                        <SquareStack className="h-4 w-4 text-card-foreground/60" />
                         Section *
                       </Label>
                       <Input
@@ -389,27 +389,20 @@ export default function InvitationManagement() {
                           }))
                         }
                         required
-                        className="h-11"
+                        className="h-11 border-none"
                       />
                     </div>
                   </div>
 
                   {/* Guardian Information */}
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <h4 className="text-sm font-medium text-gray-700">
-                        Guardian Information
-                      </h4>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label
                           htmlFor="guardian"
-                          className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                          className="flex items-center gap-2 text-sm !font-normal text-card-foreground/80"
                         >
-                          <User className="h-4 w-4 text-gray-500" />
+                          <User className="h-4 w-4 text-card-foreground/60" />
                           Guardian Name *
                         </Label>
                         <Input
@@ -423,16 +416,16 @@ export default function InvitationManagement() {
                             }))
                           }
                           required
-                          className="h-11"
+                          className="h-11 border-none"
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label
                           htmlFor="guardianEmail"
-                          className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                          className="flex items-center gap-2 text-sm !font-normal text-card-foreground/80"
                         >
-                          <Mail className="h-4 w-4 text-gray-500" />
+                          <Mail className="h-4 w-4 text-card-foreground/60" />
                           Guardian Email{" "}
                           <span className="text-gray-400 font-normal">
                             (Optional)
@@ -449,9 +442,9 @@ export default function InvitationManagement() {
                               guardianEmail: e.target.value,
                             }))
                           }
-                          className="h-11"
+                          className="h-11 border-none"
                         />
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-card-foreground/60">
                           Guardian will also receive notifications if provided
                         </p>
                       </div>
@@ -461,7 +454,7 @@ export default function InvitationManagement() {
               )}
 
               {/* Action Button */}
-              <div className="flex justify-end pt-6 border-t border-gray-100">
+              <div className="flex justify-end pt-6">
                 <Button
                   type="submit"
                   onClick={handleSubmit}
@@ -474,7 +467,7 @@ export default function InvitationManagement() {
                         !formData.section ||
                         !formData.guardian))
                   }
-                  className="h-11 px-8 bg-blue-600 hover:bg-blue-700"
+                  className="h-11 px-8"
                 >
                   {formLoading ? (
                     <div className="flex items-center gap-2">
@@ -494,7 +487,7 @@ export default function InvitationManagement() {
         </Card>
 
         {/* Invitations List */}
-        <Card>
+        <Card className="shadow-none border-none">
           <CardHeader>
             <CardTitle>Sent Invitations</CardTitle>
           </CardHeader>
@@ -505,7 +498,7 @@ export default function InvitationManagement() {
               loading={storeLoading}
               rowKey="id"
               emptyState={
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-card-foreground/60">
                   No invitations have been sent yet.
                 </div>
               }

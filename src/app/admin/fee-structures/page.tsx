@@ -51,6 +51,7 @@ import {
   useFeeStructureStore,
   FeeStructureData,
 } from "@/stores/useFeeStructureStore";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface FeeStructure {
   id: string;
@@ -245,8 +246,8 @@ export default function AdminFeeStructuresPage() {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center gap-2">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Fee Structures</h1>
+          <div className="ml-2">
+            <h1 className="text-xl !font-medium">Fee Structures</h1>
             <p className="text-gray-600">
               Define templates for all types of school fees.
             </p>
@@ -274,17 +275,24 @@ export default function AdminFeeStructuresPage() {
           </Alert>
         )}
 
-        <ResponsiveList
-          columns={columns}
-          data={feeStructures}
-          loading={loading}
-          rowKey="id"
-          emptyState={
-            <div className="text-center py-8 text-gray-500">
-              No fee structures found. Create one to get started.
-            </div>
-          }
-        />
+        <Card className="shadow-none border-none">
+          <CardHeader>
+            <CardTitle>Structures</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveList
+              columns={columns}
+              data={feeStructures}
+              loading={loading}
+              rowKey="id"
+              emptyState={
+                <div className="text-center py-8 text-gray-500">
+                  No fee structures found. Create one to get started.
+                </div>
+              }
+            />
+          </CardContent>
+        </Card>
 
         {/* Add/Edit Fee Structure Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -401,7 +409,7 @@ export default function AdminFeeStructuresPage() {
                     <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
                       <SelectValue placeholder="Select recurrence pattern" />
                     </SelectTrigger>
-                    <SelectContent>
+                     <SelectContent className="border-none">
                       <SelectItem value="ONCE" className="cursor-pointer py-3">
                         <div className="flex flex-col">
                           <span className="font-medium">One-Time</span>
