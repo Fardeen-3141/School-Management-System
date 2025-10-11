@@ -45,17 +45,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  // Mobile backdrop overlay
-  const MobileBackdrop = () => (
-    <div
-      className={cn(
-        "fixed inset-0 z-30 bg-black/50 transition-opacity lg:hidden",
-        sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-      )}
-      onClick={closeSidebar}
-    />
-  );
-
   // Navigation items component
   const NavigationItems = ({ mobile = false }: { mobile?: boolean }) => (
     <nav className="flex-1 space-y-1 px-3">
@@ -114,25 +103,32 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     </div>
   );
 
-  // Sidebar component
-  const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
-    <div
-      className={cn(
-        "flex h-full w-64 flex-col bg-card",
-        mobile &&
-          "fixed left-0 top-0 z-40 transform transition-transform duration-300 ease-in-out",
-        mobile && (sidebarOpen ? "translate-x-0" : "-translate-x-full")
-      )}
-    >
-      {/* Header */}
-      <div className="flex h-20 items-center gap-2 px-2 md:px-4">
-        <div className="flex items-center gap-2 font-semibold">
-          <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
-            <LayoutDashboard className="h-4 w-4 text-primary-foreground" />
+  return (
+    <div className="h-screen flex bg-background">
+      {/* Mobile backdrop */}
+      <div
+        className={cn(
+          "fixed inset-0 z-30 bg-black/50 transition-opacity duration-300 lg:hidden",
+          sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        onClick={closeSidebar}
+      />
+
+      {/* Mobile sidebar - always rendered for animation */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-40 h-full w-64 flex flex-col bg-card lg:hidden transition-transform duration-300 ease-in-out",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Header */}
+        <div className="flex h-20 items-center gap-2 px-2 md:px-4">
+          <div className="flex items-center gap-2 font-semibold">
+            <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
+              <LayoutDashboard className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="text-foreground">Admin Panel</span>
           </div>
-          <span className="text-foreground">Admin Panel</span>
-        </div>
-        {mobile && (
           <Button
             onClick={closeSidebar}
             variant="ghost"
@@ -142,39 +138,46 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <X className="h-4 w-4" />
             <span className="sr-only">Close sidebar</span>
           </Button>
-        )}
-      </div>
+        </div>
 
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-4">
-        <NavigationItems mobile={mobile} />
-      </div>
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto py-4">
+          <NavigationItems mobile={true} />
+        </div>
 
-      <ThemeToggle />
-
-      {/* User section */}
-      <UserSection />
-    </div>
-  );
-
-  return (
-    <div className="h-screen flex bg-background">
-      {/* Mobile backdrop */}
-      <MobileBackdrop />
-
-      {/* Mobile sidebar */}
-      <div className="lg:hidden">
-        <Sidebar mobile />
-      </div>
+        {/* Bottom section */}
+        <div className="mt-auto">
+          <ThemeToggle />
+          <UserSection />
+        </div>
+      </aside>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:block">
-        <Sidebar />
-      </div>
+      <aside className="hidden lg:flex h-full w-64 flex-col bg-card">
+        {/* Header */}
+        <div className="flex h-20 items-center gap-2 px-2 md:px-4">
+          <div className="flex items-center gap-2 font-semibold">
+            <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
+              <LayoutDashboard className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="text-foreground">Admin Panel</span>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto py-4">
+          <NavigationItems mobile={false} />
+        </div>
+
+        {/* Bottom section */}
+        <div className="mt-auto">
+          <ThemeToggle />
+          <UserSection />
+        </div>
+      </aside>
 
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden bg-card">
-        {/*bg-card allows main content round and distinct*/}
         {/* Top bar */}
         <header className="flex h-20 items-center gap-4 bg-card px-6">
           <Button

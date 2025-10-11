@@ -24,7 +24,11 @@ function HeroButtons() {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
-    return <Skeleton className="h-12 w-48 rounded-md" />;
+    return (
+      <div className="flex justify-center">
+        <Skeleton className="h-12 w-48 rounded-md" />
+      </div>
+    );
   }
 
   if (status === "authenticated") {
@@ -32,7 +36,7 @@ function HeroButtons() {
       session.user.role === "ADMIN" ? "/admin/dashboard" : "/student/dashboard";
     return (
       <Link href={dashboardUrl}>
-        <Button size="lg" className="cursor-pointer">
+        <Button size="lg" className="!p-8 cursor-pointer text-xl rounded-3xl">
           Go to Dashboard
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
@@ -43,13 +47,17 @@ function HeroButtons() {
   return (
     <div className="flex justify-center gap-4">
       <Link href="#about">
-        <Button size="lg" className="cursor-pointer">
+        <Button size="lg" className="!p-8 cursor-pointer text-xl rounded-3xl">
           Learn More
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       </Link>
       <Link href="/auth/login">
-        <Button size="lg" variant="outline" className="cursor-pointer">
+        <Button
+          size="lg"
+          variant="outline"
+          className="!p-8 cursor-pointer text-xl rounded-3xl"
+        >
           Portal Login
         </Button>
       </Link>
@@ -64,10 +72,10 @@ export default function LandingPage() {
       <Navbar />
       <main className="flex-1 pt-20">
         {/* Hero Section */}
-        <section className="relative py-20 md:py-32 bg-muted/30 border-b">
+        <section className="relative py-20 md:py-32 bg-background border-b">
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent z-10"></div>
           <div className="container mx-auto px-4 md:px-6 text-center relative z-20">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter text-primary mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-foreground mb-4">
               Anipur Adarsha Vidyaniketan HS
             </h1>
             <p className="max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground mb-8">
@@ -75,6 +83,14 @@ export default function LandingPage() {
               Welcome to our digital campus.
             </p>
             <HeroButtons />
+          </div>
+
+          {/* Rainbow circles */}
+          <div className="z-10 absolute inset-0 overflow-hidden">
+            <div className="z-[-70] absolute left-[-50%] -top-1/2 w-[1200px] aspect-square rounded-full bg-orange-500/5" />
+            <div className="z-[-80] absolute left-[-40%] -top-1/2 w-[1200px] aspect-square rounded-full bg-red-500/5" />
+            <div className="z-[-90] absolute left-[-30%] -top-1/2 w-[1200px] aspect-square rounded-full bg-yellow-500/5" />
+            <div className="z-[-100] absolute left-[-20%] -top-1/2 w-[1200px] aspect-square rounded-full bg-green-500/5" />
           </div>
         </section>
 
@@ -115,7 +131,7 @@ export default function LandingPage() {
         {/* About Us Section */}
         <section
           id="about"
-          className="bg-muted/30 py-16 md:py-24 border-t border-b"
+          className="bg-secondary py-16 md:py-24 border-t border-b"
         >
           <div className="container mx-auto px-4 md:px-6 grid md:grid-cols-2 gap-12 items-center">
             <div className="relative h-64 md:h-96 rounded-lg overflow-hidden">
@@ -158,7 +174,7 @@ export default function LandingPage() {
               <ContactInfo
                 icon={<MapPin className="h-8 w-8 text-primary" />}
                 title="Address"
-                info="Anipur, Vill-Anipur, P.O.-Purbasthali, Dist-Purba Bardhaman, West Bengal, 713513"
+                info="Anipur, P.O.-Anipur, Dist-Sribhumi(Karimganj), Assam, 788734"
               />
               <ContactInfo
                 icon={<Phone className="h-8 w-8 text-primary" />}
@@ -190,7 +206,7 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <Card className="text-center p-6 hover:shadow-lg transition-shadow">
+    <Card className="text-center p-6 hover:shadow-lg transition-shadow border-none">
       <div className="flex justify-center mb-4">{icon}</div>
       <h3 className="text-xl font-bold mb-2">{title}</h3>
       <p className="text-muted-foreground">{description}</p>
