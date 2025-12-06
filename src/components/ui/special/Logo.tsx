@@ -17,12 +17,12 @@ export default function Logo() {
           alt="logo"
           width={1000}
           height={1000}
-          className="h-12 w-12 md:w-14 md:h-14 rounded-md"
+          className="h-12 w-12 md:w-10 md:h-10 rounded-md"
         />
       </Link>
 
       <div>
-        <h1 className="font-bold tracking-tight text-lg md:text-xl">
+        <h1 className="!font-medium tracking-tight text-lg md:text-xl">
           <span className="hidden sm:inline">
             Anipur Adarsha Vidyaniketan HS
           </span>

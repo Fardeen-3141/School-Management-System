@@ -14,7 +14,7 @@ const updateStudentSchema = z.object({
   guardian: z.string().min(1),
   guardianPhone: z.string().min(1),
   guardianEmail: z.email().nullable().optional(),
-  address: z.string().optional(),
+  address: z.string().nullable().optional(),
   dateOfBirth: z.string().nullable().optional(),
 });
 
