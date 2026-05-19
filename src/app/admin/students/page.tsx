@@ -42,12 +42,6 @@ import {
   Search,
   PauseCircle,
   User,
-  Hash,
-  Mail,
-  Book,
-  SquareStack,
-  Phone,
-  MapPin,
   Eye,
   DollarSign,
   Save,
@@ -291,7 +285,7 @@ export default function AdminStudentsPage() {
               onClick={() =>
                 handleStatusChange(
                   student.id,
-                  student.user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE"
+                  student.user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE",
                 )
               }
               className="cursor-pointer"
@@ -326,7 +320,7 @@ export default function AdminStudentsPage() {
           student.user.email
             .toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
-          student.guardian.toLowerCase().includes(searchQuery.toLowerCase())
+          student.guardian.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -336,7 +330,7 @@ export default function AdminStudentsPage() {
 
     if (statusFilter !== "all") {
       filtered = filtered.filter(
-        (student) => student.user.status === statusFilter
+        (student) => student.user.status === statusFilter,
       );
     }
 
@@ -420,7 +414,7 @@ export default function AdminStudentsPage() {
         <div className="text-green-500">
           <strong>Success</strong>
           <div>Student Created Successfully</div>
-        </div>
+        </div>,
       );
       setIsDialogOpen(false);
       resetForm();
@@ -432,7 +426,7 @@ export default function AdminStudentsPage() {
         <div className="text-destructive">
           <strong>Error</strong>
           <div>Failed to create student</div>
-        </div>
+        </div>,
       );
       fetchStudents({ force: true }); // Rollback on error
     } finally {
@@ -443,7 +437,7 @@ export default function AdminStudentsPage() {
   const handleDelete = async (studentId: string) => {
     if (
       !confirm(
-        "Are you sure you want to delete this student? This will also delete all associated fees, payments, and attendance records."
+        "Are you sure you want to delete this student? This will also delete all associated fees, payments, and attendance records.",
       )
     ) {
       return;
@@ -457,7 +451,7 @@ export default function AdminStudentsPage() {
         <div className="text-green-500">
           <strong>Success</strong>
           <div>Student Deleted Successfully</div>
-        </div>
+        </div>,
       );
     } catch (err) {
       const errorMessage =
@@ -467,7 +461,7 @@ export default function AdminStudentsPage() {
         <div className="text-destructive">
           <strong>Error</strong>
           <div>Failed to delete student</div>
-        </div>
+        </div>,
       );
       fetchStudents({ force: true }); // Rollback on error
     }
@@ -475,7 +469,7 @@ export default function AdminStudentsPage() {
 
   const handleStatusChange = async (
     studentId: string,
-    newStatus: UserStatus
+    newStatus: UserStatus,
   ) => {
     setUiError("");
     setSuccess("");
@@ -556,7 +550,7 @@ export default function AdminStudentsPage() {
     // Simply sum the amount of all transactions, as both PAYMENTS and DISCOUNTS reduce the debt.
     return student.payments?.reduce(
       (total, payment) => total + Number(payment.amount),
-      0
+      0,
     );
   };
 
@@ -576,7 +570,7 @@ export default function AdminStudentsPage() {
   };
 
   const uniqueClasses = Array.from(
-    new Set(students.map((s) => s.class))
+    new Set(students.map((s) => s.class)),
   ).sort();
 
   const finalError = uiError || storeError;
@@ -646,7 +640,7 @@ export default function AdminStudentsPage() {
                         setSelectedClasses((prev) =>
                           prev.includes(cl)
                             ? prev.filter((c) => c !== cl)
-                            : [...prev, cl]
+                            : [...prev, cl],
                         )
                       }
                       onSelect={(e) => e.preventDefault()}
@@ -738,7 +732,7 @@ export default function AdminStudentsPage() {
               <div className="text-2xl font-bold text-yellow-600">
                 {
                   students.filter(
-                    (student) => student.user.status === "PENDING"
+                    (student) => student.user.status === "PENDING",
                   ).length
                 }
               </div>
@@ -776,7 +770,7 @@ export default function AdminStudentsPage() {
                   <SelectTrigger className="flex-1 cursor-pointer border-none">
                     <SelectValue placeholder="Filter by Class" />
                   </SelectTrigger>
-                   <SelectContent className="border-none">
+                  <SelectContent className="border-none">
                     <SelectItem value="all" className="cursor-pointer">
                       All Classes
                     </SelectItem>
@@ -796,7 +790,7 @@ export default function AdminStudentsPage() {
                   <SelectTrigger className="flex-1 cursor-pointer border-none">
                     <SelectValue placeholder="Filter by Status" />
                   </SelectTrigger>
-                   <SelectContent className="border-none">
+                  <SelectContent className="border-none">
                     <SelectItem value="all" className="cursor-pointer">
                       All Status
                     </SelectItem>
@@ -831,7 +825,7 @@ export default function AdminStudentsPage() {
               loading={loading}
               rowKey="id"
               emptyState={
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   {searchQuery ||
                   classFilter !== "all" ||
                   statusFilter !== "all"
@@ -845,25 +839,20 @@ export default function AdminStudentsPage() {
 
         {/* Add/Edit Student Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogContent className="max-w-4xl max-h-[90vh] bg-popover text-popover-foreground overflow-hidden flex flex-col p-0 [&>button]:hidden">
             {/* Fixed Header */}
-            <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <DialogHeader className="space-y-0">
-                <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
-                  <GraduationCap className="h-5 w-5 text-blue-600" />
+                <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-primary-foreground">
+                  <GraduationCap className="h-5 w-5" />
                   {isEditing ? "Edit Student" : "Add New Student"}
                 </DialogTitle>
-                <p className="text-sm text-gray-500 mt-1">
-                  {isEditing
-                    ? "Update student information"
-                    : "Enter complete student details"}
-                </p>
               </DialogHeader>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsDialogOpen(false)}
-                className="h-8 w-8 p-0 hover:bg-gray-100"
+                className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -884,10 +873,10 @@ export default function AdminStudentsPage() {
               <div className="space-y-8 pb-6">
                 {/* Basic Information Section */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                    <User className="h-5 w-5 text-blue-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Basic Information
+                  <div className="flex items-center gap-2 pb-2 border-b border-border">
+                    <User className="h-4 w-4" />
+                    <h3 className="text-base font-semibold">
+                      Student Information
                     </h3>
                   </div>
 
@@ -896,9 +885,8 @@ export default function AdminStudentsPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="name"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <User className="h-4 w-4 text-gray-500" />
                         Full Name *
                       </Label>
                       <Input
@@ -913,7 +901,7 @@ export default function AdminStudentsPage() {
                           }))
                         }
                         required
-                        className="h-11"
+                        className="h-11 hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
                       />
                     </div>
 
@@ -921,9 +909,8 @@ export default function AdminStudentsPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="email"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <Mail className="h-4 w-4 text-gray-500" />
                         Email *
                       </Label>
                       <Input
@@ -938,7 +925,7 @@ export default function AdminStudentsPage() {
                         }
                         required
                         placeholder="student@example.com"
-                        className="h-11"
+                        className="h-11 hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
                       />
                     </div>
 
@@ -946,9 +933,8 @@ export default function AdminStudentsPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="rollNumber"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <Hash className="h-4 w-4 text-gray-500" />
                         Roll Number *
                       </Label>
                       <Input
@@ -963,12 +949,16 @@ export default function AdminStudentsPage() {
                           }))
                         }
                         required
-                        className="h-11"
+                        className="h-11 hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
                       />
                     </div>
 
                     {/* Date of Birth */}
                     <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium">
+                        Date of Birth{" "}
+                        <span className="text-destructive">*</span>
+                      </label>
                       <DatePicker
                         value={formData.dateOfBirth}
                         onChange={(date) =>
@@ -977,21 +967,10 @@ export default function AdminStudentsPage() {
                             dateOfBirth: date || "",
                           }))
                         }
-                        label="Date of Birth"
                         placeholder="Select date of birth"
                         maxDate={new Date().toISOString().split("T")[0]} // Prevent future dates for DOB
                       />
                     </div>
-                  </div>
-                </div>
-
-                {/* Academic Information Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                    <Book className="h-5 w-5 text-blue-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Academic Information
-                    </h3>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -999,9 +978,8 @@ export default function AdminStudentsPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="class"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <Book className="h-4 w-4 text-gray-500" />
                         Class *
                       </Label>
                       <Select
@@ -1011,10 +989,10 @@ export default function AdminStudentsPage() {
                         }
                         required
                       >
-                        <SelectTrigger className="h-11">
+                        <SelectTrigger className="h-11 hover:border-ring focus:outline-none focus:ring focus:ring-ring focus:border-ring transition-all duration-200">
                           <SelectValue placeholder="Select a class" />
                         </SelectTrigger>
-                         <SelectContent className="border-none">
+                        <SelectContent className="border-none">
                           {classOptions.map((option) => (
                             <SelectItem key={option} value={option}>
                               {option}
@@ -1028,9 +1006,8 @@ export default function AdminStudentsPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="section"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <SquareStack className="h-4 w-4 text-gray-500" />
                         Section *
                       </Label>
                       <Select
@@ -1040,10 +1017,10 @@ export default function AdminStudentsPage() {
                         }
                         required
                       >
-                        <SelectTrigger className="h-11">
+                        <SelectTrigger className="h-11 hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200">
                           <SelectValue placeholder="Select a section" />
                         </SelectTrigger>
-                         <SelectContent className="border-none">
+                        <SelectContent className="border-none">
                           {sectionOptions.map((option) => (
                             <SelectItem key={option} value={option}>
                               {option}
@@ -1057,9 +1034,9 @@ export default function AdminStudentsPage() {
 
                 {/* Guardian Information Section */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                    <Users className="h-5 w-5 text-blue-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">
+                  <div className="flex items-center gap-2 pb-2 border-b border-border">
+                    <Users className="h-5 w-5" />
+                    <h3 className="text-base font-semibold">
                       Guardian Information
                     </h3>
                   </div>
@@ -1069,9 +1046,8 @@ export default function AdminStudentsPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="guardian"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <User className="h-4 w-4 text-gray-500" />
                         Guardian Name *
                       </Label>
                       <Input
@@ -1085,7 +1061,7 @@ export default function AdminStudentsPage() {
                           }))
                         }
                         required
-                        className="h-11"
+                        className="h-11 hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
                       />
                     </div>
 
@@ -1093,9 +1069,8 @@ export default function AdminStudentsPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="guardianPhone"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <Phone className="h-4 w-4 text-gray-500" />
                         Guardian Phone *
                       </Label>
                       <Input
@@ -1110,7 +1085,7 @@ export default function AdminStudentsPage() {
                           }))
                         }
                         required
-                        className="h-11"
+                        className="h-11 hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
                       />
                     </div>
 
@@ -1118,9 +1093,8 @@ export default function AdminStudentsPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="guardianEmail"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <Mail className="h-4 w-4 text-gray-500" />
                         Guardian Email{" "}
                         <span className="text-gray-400 font-normal">
                           (Optional)
@@ -1137,7 +1111,7 @@ export default function AdminStudentsPage() {
                             guardianEmail: e.target.value,
                           }))
                         }
-                        className="h-11"
+                        className="h-11 hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
                       />
                     </div>
 
@@ -1145,9 +1119,8 @@ export default function AdminStudentsPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="address"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <MapPin className="h-4 w-4 text-gray-500" />
                         Address
                       </Label>
                       <Input
@@ -1161,7 +1134,7 @@ export default function AdminStudentsPage() {
                             address: e.target.value,
                           }))
                         }
-                        className="h-11"
+                        className="h-11 hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
                       />
                     </div>
                   </div>
@@ -1170,13 +1143,13 @@ export default function AdminStudentsPage() {
             </div>
 
             {/* Fixed Footer */}
-            <div className="border-t border-gray-100 p-6 pt-4 bg-gray-50">
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <div className="border-t border-border p-4">
+              <div className="flex flex-col-reverse justify-between sm:flex-row sm:justify-between gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
-                  className="h-11 px-6"
+                  className="h-11 px-6 bg-popover text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                   disabled={formLoading}
                 >
                   Cancel
@@ -1194,7 +1167,7 @@ export default function AdminStudentsPage() {
                     !formData.guardian ||
                     !formData.guardianPhone
                   }
-                  className="h-11 px-8 bg-blue-600 hover:bg-blue-700"
+                  className="h-11 px-8 bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer"
                 >
                   {formLoading ? (
                     <div className="flex items-center gap-2">

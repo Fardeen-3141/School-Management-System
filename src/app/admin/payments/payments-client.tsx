@@ -33,7 +33,6 @@ import {
   Clock,
   X,
   AlertCircle,
-  User,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -191,7 +190,7 @@ export default function AdminPaymentsPageClient() {
 
     if (viewingStudent) {
       filtered = filtered.filter(
-        (payment) => payment.student.id === viewingStudent.id
+        (payment) => payment.student.id === viewingStudent.id,
       );
     }
 
@@ -204,7 +203,7 @@ export default function AdminPaymentsPageClient() {
           payment.student.rollNumber
             .toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
-          payment.fee?.type.toLowerCase().includes(searchQuery.toLowerCase())
+          payment.fee?.type.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -217,19 +216,19 @@ export default function AdminPaymentsPageClient() {
           filtered = filtered.filter(
             (payment) =>
               new Date(payment.date).toDateString() ===
-              filterDate.toDateString()
+              filterDate.toDateString(),
           );
           break;
         case "week":
           filterDate.setDate(today.getDate() - 7);
           filtered = filtered.filter(
-            (payment) => new Date(payment.date) >= filterDate
+            (payment) => new Date(payment.date) >= filterDate,
           );
           break;
         case "month":
           filterDate.setMonth(today.getMonth() - 1);
           filtered = filtered.filter(
-            (payment) => new Date(payment.date) >= filterDate
+            (payment) => new Date(payment.date) >= filterDate,
           );
           break;
       }
@@ -363,7 +362,7 @@ export default function AdminPaymentsPageClient() {
         // For each fee, find the total credited (paid or discounted).
         const totalCreditedToFee = (fee.payments || []).reduce(
           (sum: number, p) => sum + Number(p.amount),
-          0
+          0,
         );
         const balance = Number(fee.amount) - totalCreditedToFee;
         return balance > 0 ? balance : 0;
@@ -374,13 +373,13 @@ export default function AdminPaymentsPageClient() {
       .filter(
         (p) =>
           p.type === "PAYMENT" &&
-          new Date(p.date).toDateString() === new Date().toDateString()
+          new Date(p.date).toDateString() === new Date().toDateString(),
       )
       .reduce((sum, p) => sum + Number(p.amount), 0);
 
     // The count of actual payment transactions.
     const completedCount = sourcePayments.filter(
-      (p) => p.type === "PAYMENT"
+      (p) => p.type === "PAYMENT",
     ).length;
 
     return {
@@ -399,7 +398,7 @@ export default function AdminPaymentsPageClient() {
       // The total paid is simply the sum of all payments/discounts for that fee.
       const totalPaid = fee.payments.reduce(
         (sum, p) => sum + Number(p.amount),
-        0
+        0,
       );
       return totalPaid < fee.amount; // Only show fees that aren't fully paid
     }) || [];
@@ -447,9 +446,7 @@ export default function AdminPaymentsPageClient() {
           <div>
             {!viewingStudent && (
               <>
-                <h1 className="text-xl !font-medium">
-                  Payments Management
-                </h1>
+                <h1 className="text-xl !font-medium">Payments Management</h1>
               </>
             )}
           </div>
@@ -586,7 +583,7 @@ export default function AdminPaymentsPageClient() {
                   <SelectTrigger className="flex-1 cursor-pointer border-none">
                     <SelectValue placeholder="Filter by Date" />
                   </SelectTrigger>
-                   <SelectContent className="border-none">
+                  <SelectContent className="border-none">
                     <SelectItem value="all" className="cursor-pointer">
                       All Time
                     </SelectItem>
@@ -631,25 +628,20 @@ export default function AdminPaymentsPageClient() {
         {/* Add/Edit Payment Dialog */}
         <div className="">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col p-0">
+            <DialogContent className="max-w-lg max-h-[90vh] bg-popover text-popover-foreground overflow-hidden flex flex-col p-0 [&>button]:hidden border-none">
               {/* Fixed Header */}
-              <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
+              <div className="flex items-center justify-between p-4 border-b border-border">
                 <DialogHeader className="space-y-0">
-                  <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
-                    <CreditCard className="h-5 w-5 text-blue-600" />
+                  <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-primary-foreground">
+                    <CreditCard className="h-5 w-5" />
                     {isEditing ? "Edit Payment" : "Record New Payment"}
                   </DialogTitle>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {isEditing
-                      ? "Update payment details"
-                      : "Enter payment information for the student"}
-                  </p>
                 </DialogHeader>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsDialogOpen(false)}
-                  className="h-8 w-8 p-0 hover:bg-gray-100"
+                  className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -672,9 +664,8 @@ export default function AdminPaymentsPageClient() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="studentId"
-                      className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      className="flex items-center gap-2 text-sm font-medium"
                     >
-                      <User className="h-4 w-4 text-gray-500" />
                       Student *
                     </Label>
                     <Select
@@ -688,10 +679,10 @@ export default function AdminPaymentsPageClient() {
                       }
                       disabled={!!viewingStudent}
                     >
-                      <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
+                      <SelectTrigger className="h-11 cursor-pointer hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200">
                         <SelectValue placeholder="Choose a student..." />
                       </SelectTrigger>
-                       <SelectContent className="border-none">
+                      <SelectContent className="border-none">
                         {students.map((student) => (
                           <SelectItem
                             key={student.id}
@@ -718,9 +709,8 @@ export default function AdminPaymentsPageClient() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="feeId"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <CreditCard className="h-4 w-4 text-gray-500" />
                         Fee Type{" "}
                         <span className="text-gray-400 font-normal">
                           (Optional)
@@ -737,14 +727,14 @@ export default function AdminPaymentsPageClient() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
+                        <SelectTrigger className="h-11 cursor-pointer hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200">
                           <SelectValue placeholder="Select fee type or leave empty for general payment" />
                         </SelectTrigger>
-                         <SelectContent className="border-none">
+                        <SelectContent className="border-none">
                           {availableFees.map((fee) => {
                             const totalPaid = fee.payments.reduce(
                               (sum, p) => sum + p.amount,
-                              0
+                              0,
                             );
                             const remaining = fee.amount - totalPaid;
                             return (
@@ -779,9 +769,8 @@ export default function AdminPaymentsPageClient() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="amount"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
-                        <DollarSign className="h-4 w-4 text-gray-500" />
                         Amount Paid *
                       </Label>
                       <div className="relative">
@@ -810,7 +799,7 @@ export default function AdminPaymentsPageClient() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="discount"
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                        className="flex items-center gap-2 text-sm font-medium"
                       >
                         Discount Given
                       </Label>
@@ -842,6 +831,12 @@ export default function AdminPaymentsPageClient() {
 
                   {/* Payment Date */}
                   <div className="space-y-2">
+                    <Label
+                      htmlFor="discount"
+                      className="flex items-center gap-2 text-sm font-medium"
+                    >
+                      Payment Date
+                    </Label>
                     <DatePicker
                       value={formData.date}
                       onChange={(date) =>
@@ -850,22 +845,20 @@ export default function AdminPaymentsPageClient() {
                           date: date || "",
                         }))
                       }
-                      label="Payment Date"
                       placeholder="Select payment date"
-                      required={true}
                     />
                   </div>
                 </form>
               </div>
 
               {/* Fixed Footer */}
-              <div className="border-t border-gray-100 p-6 pt-4 bg-gray-50">
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+              <div className="border-t border-border p-4">
+                <div className="flex flex-col-reverse justify-between sm:flex-row sm:justify-between gap-3">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setIsDialogOpen(false)}
-                    className="h-11 px-6"
+                    className="h-11 px-6 bg-popover text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                     disabled={formLoading}
                   >
                     Cancel
@@ -879,7 +872,7 @@ export default function AdminPaymentsPageClient() {
                       !formData.amount ||
                       !formData.date
                     }
-                    className="h-11 px-6 bg-blue-600 hover:bg-blue-700"
+                    className="h-11 px-6 bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer"
                   >
                     {formLoading ? (
                       <div className="flex items-center gap-2">

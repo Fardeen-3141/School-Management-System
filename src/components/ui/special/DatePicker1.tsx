@@ -1,93 +1,94 @@
-// src\components\ui\special\DatePicker1.tsx
-"use state";
+// src\components\ui\special\DatePicker.tsx
 
-import React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import React, { useState } from "react";
+import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface DatePickerProps {
-  value: string; // The currently selected date as "YYYY-MM-DD"
-  onChange: (dateString: string | null) => void; // Called when user picks or clears
-  placeholder: string; // Text shown when nothing is selected
-  minDate?: string | null; // Earliest selectable date "YYYY-MM-DD"
-  maxDate?: string | null; // Latest selectable date "YYYY-MM-DD" ... It has to be passed as maxDate={new Date().toISOString().split("T")[0]} from the parent
-  className?: string; // Lets the parent add extra Tailwind classes
+  value: string;
+  onChange: (dateString: string | null) => void;
+  placeholder: string;
+  label: string;
+  required?: boolean;
+  minDate?: string | null;
+  maxDate?: string | null;
+  className?: string;
 }
 
-const months = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-const daysOfWeek = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
+// Date Picker Component
 export const DatePicker = ({
   value,
   onChange,
   placeholder = "Select date",
+  label,
+  required = false,
   minDate = null,
   maxDate = null,
   className = "",
 }: DatePickerProps) => {
-  const [isOpen, setIsOpen] = React.useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(
+    value ? new Date(value).getMonth() : new Date().getMonth()
+  );
+  const [currentYear, setCurrentYear] = useState(
+    value ? new Date(value).getFullYear() : new Date().getFullYear()
+  );
 
-  // These control which month/year the CALENDAR is showing ... (not necessarily the selected date)
-  const [currentMonth, setCurrentMonth] = React.useState<number>(
-    value ? new Date(value).getMonth() : new Date().getMonth(),
-  );
-  const [currentYear, setCurrentYear] = React.useState<number>(
-    value ? new Date(value).getFullYear() : new Date().getFullYear(),
-  );
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
   const currentDate = new Date();
-
-  // Generates: [currentYear-50, ..., currentYear, ..., currentYear+50] ... So if today is 2025, the dropdown shows 1975 to 2075
   const years = Array.from(
     { length: 100 },
-    (_, i) => currentDate.getFullYear() - 50 + i,
+    (_, i) => currentDate.getFullYear() - 50 + i
   );
 
-  // new Date(year, month+1, 0) = last day of the given month ... The "day 0" trick means "day before the 1st of next month"
-  const getDaysInMonth = (month: number, year: number): number => {
+  const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
-  // Returns 0 (Sun) through 6 (Sat) — used to offset the grid
-  const getFirstDayOfMonth = (month: number, year: number): number => {
+
+  const getFirstDayOfMonth = (month: number, year: number) => {
     return new Date(year, month, 1).getDay();
   };
 
-  const formatDate = (date: string): string => {
+  const formatDate = (date: string) => {
     if (!date) return placeholder;
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
     }).format(new Date(date));
-    // "2010-03-15" → "March 15, 2010"
   };
 
-  const isDateDisabled = (day: number): boolean => {
+  const isDateDisabled = (day: number) => {
     const date = new Date(currentYear, currentMonth, day);
-    const localDateString = date.toLocaleDateString("en-CA"); // Outputs "YYYY-MM-DD"
-
-    if (minDate && localDateString < minDate) return true;
-    if (maxDate && localDateString > maxDate) return true;
+    if (minDate && date < new Date(minDate)) return true;
+    if (maxDate && date > new Date(maxDate)) return true;
     return false;
   };
 
-  // Uses manual string formatting instead of .toISOString() ... to prevent timezone shifts from changing the selected day.
-  const handleDateSelect = (day: number): void => {
-    const dateString = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(day).padEnd(2, "0")}`;
+  const handleDateSelect = (day: number) => {
+    // Create date string manually to avoid timezone issues
+    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(
+      2,
+      "0"
+    )}-${String(day).padStart(2, "0")}`;
     onChange(dateString);
     setIsOpen(false);
   };
@@ -97,21 +98,19 @@ export const DatePicker = ({
     const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
     const days = [];
 
-    // Push empty placeholder divs for the offset
+    // Empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="w-10 h-10" />);
+      days.push(<div key={`empty-${i}`} className="w-10 h-10"></div>);
     }
 
-    // Push the actual day buttons
+    // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const isSelected =
         value &&
         new Date(value).getDate() === day &&
         new Date(value).getMonth() === currentMonth &&
         new Date(value).getFullYear() === currentYear;
-
       const isDisabled = isDateDisabled(day);
-
       const isToday =
         new Date().getDate() === day &&
         new Date().getMonth() === currentMonth &&
@@ -122,20 +121,24 @@ export const DatePicker = ({
           key={day}
           onClick={() => !isDisabled && handleDateSelect(day)}
           disabled={isDisabled}
-          className={`w-10 h-10 rounded-lg text-sm font-medium transition-all duration-200 ${
-            isSelected
-              ? "bg-primary text-primary-foreground shadow-md"
-              : isToday
+          className={`
+            w-10 h-10 rounded-lg text-sm font-medium transition-all duration-200
+            ${
+              isSelected
+                ? "bg-primary text-primary-foreground shadow-md"
+                : isToday
                 ? "bg-accent text-accent-foreground border border-primary"
                 : "hover:bg-accent hover:text-accent-foreground"
-          } ${
-            isDisabled
-              ? "text-muted-foreground cursor-not-allowed opacity-50 hover:bg-transparent"
-              : "cursor-pointer"
-          }`}
+            }
+            ${
+              isDisabled
+                ? "text-muted-foreground cursor-not-allowed opacity-50 hover:bg-transparent"
+                : "cursor-pointer"
+            }
+          `}
         >
           {day}
-        </button>,
+        </button>
       );
     }
 
@@ -144,11 +147,18 @@ export const DatePicker = ({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
+      {label && (
+        <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+          {label} {required && <span className="text-destructive">*</span>}
+        </label>
+      )}
+
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
           <button
             type="button"
-            className="w-full h-11 px-3 py-2 border border-input rounded-md shadow-sm text-left flex items-center justify-between hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
+            className="w-full h-11 px-3 py-2 bg-background border border-input rounded-md shadow-sm text-left flex items-center justify-between hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
           >
             <div className="flex items-center gap-2 text-sm">
               <span
@@ -163,8 +173,10 @@ export const DatePicker = ({
               }`}
             />
           </button>
-        </DialogTrigger>
-        <DialogContent className="fixed fixed-center z-50 w-80 p-4 bg-popover text-popover-foreground [&>button]:hidden border-none">
+        </PopoverTrigger>
+
+        <PopoverContent className="w-80 p-4" align="center">
+          {/* Month and Year Selectors */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <select
@@ -191,72 +203,72 @@ export const DatePicker = ({
               </select>
             </div>
 
-            {/* Prev/Next arrow buttons */}
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => {
                   if (currentMonth === 0) {
                     setCurrentMonth(11);
-                    setCurrentYear((prev) => prev - 1);
+                    setCurrentYear(currentYear - 1);
                   } else {
-                    setCurrentMonth((prev) => prev - 1);
+                    setCurrentMonth(currentMonth - 1);
                   }
                 }}
-                className="p-1.5 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
+                className="p-1.5 hover:bg-accent rounded-md transition-colors"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="h-4 w-4 text-muted-foreground" />
               </button>
               <button
                 type="button"
                 onClick={() => {
                   if (currentMonth === 11) {
                     setCurrentMonth(0);
-                    setCurrentYear((prev) => prev + 1);
+                    setCurrentYear(currentYear + 1);
                   } else {
-                    setCurrentMonth((prev) => prev + 1);
+                    setCurrentMonth(currentMonth + 1);
                   }
                 }}
-                className="p-1.5 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
+                className="p-1.5 hover:bg-accent rounded-md transition-colors"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
           </div>
 
-          {/* Day of week headers */}
+          {/* Days of week header */}
           <div className="grid grid-cols-7 gap-1 mb-2">
-            {daysOfWeek.map((day) => (
+            {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
               <div
                 key={day}
-                className="w-10 h-8 flex items-center justify-center text-xs font-medium"
+                className="w-10 h-8 flex items-center justify-center text-xs font-medium text-muted-foreground"
               >
                 {day}
               </div>
             ))}
           </div>
 
-          {/* The actual calendar — renderCalendar() returns our flat array */}
+          {/* Calendar grid */}
           <div className="grid grid-cols-7 gap-1">{renderCalendar()}</div>
 
+          {/* Quick actions */}
           <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
             <button
               type="button"
               onClick={() => {
                 const today = new Date();
-                const todayString = today.toLocaleDateString("en-CA");
+                const todayString = today.toISOString().split("T")[0];
                 onChange(todayString);
                 setCurrentMonth(today.getMonth());
                 setCurrentYear(today.getFullYear());
                 setIsOpen(false);
               }}
-              className="px-3 py-1.5 text-sm text-primary hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
+              className="px-3 py-1.5 text-sm text-primary hover:bg-accent rounded-md transition-colors"
             >
               Today
             </button>
             <button
               type="button"
-              onChange={() => {
+              onClick={() => {
                 onChange(null);
                 setIsOpen(false);
               }}
@@ -265,8 +277,8 @@ export const DatePicker = ({
               Clear
             </button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 };

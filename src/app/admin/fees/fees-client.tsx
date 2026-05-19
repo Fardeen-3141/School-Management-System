@@ -50,10 +50,8 @@ import {
   X,
   AlertCircle,
   GraduationCap,
-  Users,
   Book,
   SquareStack,
-  User,
   Clock,
 } from "lucide-react";
 import { addMonths, addYears, endOfMonth, format } from "date-fns";
@@ -180,7 +178,7 @@ export default function AdminFeesPageClient() {
         // CORRECTED LOGIC: Sums all payments and discounts together.
         const totalPaid = fee.payments.reduce(
           (sum, p) => sum + Number(p.amount),
-          0
+          0,
         );
         return `₹${totalPaid.toLocaleString()}`;
       },
@@ -251,7 +249,7 @@ export default function AdminFeesPageClient() {
           fee.student.rollNumber
             .toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
-          fee.type.toLowerCase().includes(searchQuery.toLowerCase())
+          fee.type.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -370,7 +368,7 @@ export default function AdminFeesPageClient() {
         setSuccess(
           formData.applyToClass
             ? " Fees created for students!"
-            : "Fee created successfully!"
+            : "Fee created successfully!",
         );
       }
       setIsDialogOpen(false);
@@ -446,7 +444,7 @@ export default function AdminFeesPageClient() {
       setSuccess(
         `Fee rule '${setup.feeStructure.type}' has been ${
           !setup.isActive ? "activated" : "deactivated"
-        }.`
+        }.`,
       );
     } catch (err) {
       setUiError((err as Error).message);
@@ -460,7 +458,7 @@ export default function AdminFeesPageClient() {
     if (
       !studentId ||
       !confirm(
-        `Are you sure you want to remove the '${setup.feeStructure.type}' rule from this student?`
+        `Are you sure you want to remove the '${setup.feeStructure.type}' rule from this student?`,
       )
     )
       return;
@@ -483,7 +481,7 @@ export default function AdminFeesPageClient() {
     // 1. Calculate the total credited amount (includes PAYMENTS and DISCOUNTS)
     const totalCredited = fee.payments.reduce(
       (sum, p) => sum + Number(p.amount),
-      0
+      0,
     );
 
     const balance = Number(fee.amount) - totalCredited;
@@ -506,7 +504,7 @@ export default function AdminFeesPageClient() {
 
     const totalFees = sourceData.reduce(
       (sum, fee) => sum + Number(fee.amount),
-      0
+      0,
     );
 
     let totalCollected = 0;
@@ -574,7 +572,7 @@ export default function AdminFeesPageClient() {
   const stats = calculateStats();
   const uniqueTypes = Array.from(new Set(fees.map((f) => f.type))).sort();
   const uniqueClasses = Array.from(
-    new Set(students.map((s) => s.class))
+    new Set(students.map((s) => s.class)),
   ).sort();
 
   const finalError = uiError || storeError;
@@ -900,7 +898,7 @@ export default function AdminFeesPageClient() {
                     <SelectTrigger className="flex-1 cursor-pointer border-none">
                       <SelectValue placeholder="Filter by Type" />
                     </SelectTrigger>
-                     <SelectContent className="border-none">
+                    <SelectContent className="border-none">
                       <SelectItem value="all" className="cursor-pointer">
                         All Types
                       </SelectItem>
@@ -920,7 +918,7 @@ export default function AdminFeesPageClient() {
                     <SelectTrigger className="flex-1 cursor-pointer border-none">
                       <SelectValue placeholder="Filter by Status" />
                     </SelectTrigger>
-                     <SelectContent className="border-none">
+                    <SelectContent className="border-none">
                       <SelectItem value="all" className="cursor-pointer">
                         All Status
                       </SelectItem>
@@ -965,25 +963,20 @@ export default function AdminFeesPageClient() {
 
         {/* Add/Edit Fee Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogContent className="max-w-xl max-h-[90vh] bg-popover text-popover-foreground overflow-hidden flex flex-col p-0 [&>button]:hidden border-none">
             {/* Fixed Header */}
-            <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <DialogHeader className="space-y-0">
-                <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
-                  <CreditCard className="h-5 w-5 text-blue-600" />
+                <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+                  <CreditCard className="h-5 w-5" />
                   {isEditing ? "Edit Fee" : "Create New Fee"}
                 </DialogTitle>
-                <p className="text-sm text-gray-500 mt-1">
-                  {isEditing
-                    ? "Update fee details"
-                    : "Add a new fee for student(s)"}
-                </p>
               </DialogHeader>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsDialogOpen(false)}
-                className="h-8 w-8 p-0 hover:bg-gray-100"
+                className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -1006,9 +999,8 @@ export default function AdminFeesPageClient() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="type"
-                    className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                    className="flex items-center gap-2 text-sm font-medium"
                   >
-                    <CreditCard className="h-4 w-4 text-gray-500" />
                     Fee Type *
                   </Label>
                   <Input
@@ -1027,9 +1019,8 @@ export default function AdminFeesPageClient() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="amount"
-                    className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                    className="flex items-center gap-2 text-sm font-medium"
                   >
-                    <DollarSign className="h-4 w-4 text-gray-500" />
                     Amount *
                   </Label>
                   <div className="relative">
@@ -1057,6 +1048,12 @@ export default function AdminFeesPageClient() {
 
                 {/* Due Date */}
                 <div className="space-y-2">
+                  <Label
+                    htmlFor="amount"
+                    className="flex items-center gap-2 text-sm font-medium"
+                  >
+                    Due Date
+                  </Label>
                   <DatePicker
                     value={formData.dueDate}
                     onChange={(date) =>
@@ -1065,16 +1062,14 @@ export default function AdminFeesPageClient() {
                         dueDate: date || "",
                       }))
                     }
-                    label="Due Date"
                     placeholder="Select due date"
-                    required={true}
                   />
                 </div>
 
                 {!isEditing && (
                   <div className="space-y-4">
                     {/* Apply To Class Toggle */}
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="p-4 bg-secondary text-secondary-foreground rounded-lg border border-border">
                       <div className="flex items-center gap-3">
                         <input
                           type="checkbox"
@@ -1086,13 +1081,12 @@ export default function AdminFeesPageClient() {
                               applyToClass: e.target.checked,
                             }))
                           }
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          className="w-4 h-4"
                         />
                         <Label
                           htmlFor="applyToClass"
-                          className="flex items-center gap-2 text-sm font-medium text-gray-900 cursor-pointer"
+                          className="flex items-center gap-2 text-sm font-medium cursor-pointer"
                         >
-                          <Users className="h-4 w-4 text-gray-500" />
                           Apply to entire class
                         </Label>
                       </div>
@@ -1115,9 +1109,8 @@ export default function AdminFeesPageClient() {
                           <div className="space-y-2">
                             <Label
                               htmlFor="targetClass"
-                              className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                              className="flex items-center gap-2 text-sm font-medium"
                             >
-                              <Book className="h-4 w-4 text-gray-500" />
                               Class *
                             </Label>
                             <Select
@@ -1129,10 +1122,10 @@ export default function AdminFeesPageClient() {
                                 }))
                               }
                             >
-                              <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
+                              <SelectTrigger className="h-11 cursor-pointer hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200">
                                 <SelectValue placeholder="Select class" />
                               </SelectTrigger>
-                               <SelectContent className="border-none">
+                              <SelectContent className="border-none">
                                 {uniqueClasses.map((cls) => (
                                   <SelectItem
                                     key={cls}
@@ -1152,7 +1145,7 @@ export default function AdminFeesPageClient() {
                           <div className="space-y-2">
                             <Label
                               htmlFor="targetSection"
-                              className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                              className="flex items-center gap-2 text-sm font-medium"
                             >
                               <SquareStack className="h-4 w-4 text-gray-500" />
                               Section{" "}
@@ -1183,9 +1176,8 @@ export default function AdminFeesPageClient() {
                       <div className="space-y-2">
                         <Label
                           htmlFor="studentId"
-                          className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                          className="flex items-center gap-2 text-sm font-medium"
                         >
-                          <User className="h-4 w-4 text-gray-500" />
                           Student *
                         </Label>
                         <Select
@@ -1198,10 +1190,10 @@ export default function AdminFeesPageClient() {
                           }
                           disabled={!!viewingStudent || formData.applyToClass}
                         >
-                          <SelectTrigger className="h-11 cursor-pointer hover:bg-gray-50 transition-colors">
+                          <SelectTrigger className="h-11 cursor-pointer hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200">
                             <SelectValue placeholder="Select student" />
                           </SelectTrigger>
-                           <SelectContent className="border-none">
+                          <SelectContent className="border-none">
                             {students.map((student) => (
                               <SelectItem
                                 key={student.id}
@@ -1212,7 +1204,7 @@ export default function AdminFeesPageClient() {
                                   <span className="font-medium">
                                     {student.name}
                                   </span>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs">
                                     Roll: {student.rollNumber} • Class:{" "}
                                     {student.class}-{student.section}
                                   </span>
@@ -1230,9 +1222,8 @@ export default function AdminFeesPageClient() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="studentIdEdit"
-                      className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                      className="flex items-center gap-2 text-sm font-medium"
                     >
-                      <User className="h-4 w-4 text-gray-500" />
                       Student
                     </Label>
                     <Input
@@ -1249,13 +1240,13 @@ export default function AdminFeesPageClient() {
             </div>
 
             {/* Fixed Footer */}
-            <div className="border-t border-gray-100 p-6 pt-4 bg-gray-50">
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <div className="border-t border-border p-4">
+              <div className="flex flex-col-reverse justify-between sm:flex-row sm:justify-between gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
-                  className="h-11 px-6"
+                  className="h-11 px-6 bg-popover text text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                   disabled={formLoading}
                 >
                   Cancel
@@ -1269,11 +1260,11 @@ export default function AdminFeesPageClient() {
                     !formData.amount ||
                     !formData.dueDate
                   }
-                  className="h-11 px-6 bg-blue-600 hover:bg-blue-700"
+                  className="h-11 px-6 bg-primary text text-primary-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer"
                 >
                   {formLoading ? (
                     <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin cursor-pointer"></div>
                       Saving...
                     </div>
                   ) : isEditing ? (
@@ -1311,7 +1302,7 @@ export default function AdminFeesPageClient() {
                       }))
                     }
                     placeholder={`Default: ₹${Number(
-                      selectedSetup?.feeStructure.amount
+                      selectedSetup?.feeStructure.amount,
                     ).toLocaleString()}`}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -1335,13 +1326,13 @@ export default function AdminFeesPageClient() {
                     <SelectTrigger className="cursor-pointer">
                       <SelectValue placeholder="Select a fee structure..." />
                     </SelectTrigger>
-                     <SelectContent className="border-none">
+                    <SelectContent className="border-none">
                       {allFeeStructures
                         .filter(
                           (s) =>
                             !studentFeeSetups.some(
-                              (applied) => applied.feeStructure.id === s.id
-                            )
+                              (applied) => applied.feeStructure.id === s.id,
+                            ),
                         )
                         .map((structure) => (
                           <SelectItem
@@ -1376,8 +1367,8 @@ export default function AdminFeesPageClient() {
                   {setupFormLoading
                     ? "Saving..."
                     : isEditingSetup
-                    ? "Save Changes"
-                    : "Apply Rule"}
+                      ? "Save Changes"
+                      : "Apply Rule"}
                 </Button>
               </DialogFooter>
             </form>

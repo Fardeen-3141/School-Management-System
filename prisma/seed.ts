@@ -3,7 +3,9 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ["query", "info", "warn", "error"], // This will let us see if it's hitting the DB
+});
 
 async function main() {
   console.log("Seeding database...");
