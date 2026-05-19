@@ -143,7 +143,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       const errorMessage =
         error instanceof Error ? error.message : "Failed to add student";
       set({ loading: false, error: errorMessage });
-      throw error;
+      throw new Error(errorMessage);
     }
   },
 

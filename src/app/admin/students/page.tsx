@@ -130,7 +130,7 @@ const classOptions = [
 const sectionOptions = ["A", "B", "C", "D"];
 
 export default function AdminStudentsPage() {
-  // All data-related state, coming from our Zustand store.
+  // All data-related state, coming from the Zustand store.
   const {
     students,
     loading,
@@ -425,7 +425,7 @@ export default function AdminStudentsPage() {
       toast.error(
         <div className="text-destructive">
           <strong>Error</strong>
-          <div>Failed to create student</div>
+          <div>{errorMessage}</div>
         </div>,
       );
       fetchStudents({ force: true }); // Rollback on error
@@ -460,7 +460,7 @@ export default function AdminStudentsPage() {
       toast.error(
         <div className="text-destructive">
           <strong>Error</strong>
-          <div>Failed to delete student</div>
+          <div>{errorMessage}</div>
         </div>,
       );
       fetchStudents({ force: true }); // Rollback on error
