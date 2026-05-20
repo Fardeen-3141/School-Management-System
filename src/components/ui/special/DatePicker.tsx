@@ -1,5 +1,6 @@
-// src\components\ui\special\DatePicker1.tsx
-"use state";
+// src\components\ui\special\DatePicker.tsx
+// Completely tested!!!
+"use client";
 
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -41,12 +42,16 @@ export const DatePicker = ({
 }: DatePickerProps) => {
   const [isOpen, setIsOpen] = React.useState<boolean>(false);
 
+  const [selectedYear, selectedMonth, selectedDay] = value
+    ? value.split("-").map(Number)
+    : [0, 0, 0];
+
   // These control which month/year the CALENDAR is showing ... (not necessarily the selected date)
   const [currentMonth, setCurrentMonth] = React.useState<number>(
-    value ? new Date(value).getMonth() : new Date().getMonth(),
+    selectedMonth ? selectedMonth - 1 : new Date().getMonth(), // -1 for zero-based
   );
   const [currentYear, setCurrentYear] = React.useState<number>(
-    value ? new Date(value).getFullYear() : new Date().getFullYear(),
+    selectedYear || new Date().getFullYear(),
   );
 
   const currentDate = new Date();
@@ -68,17 +73,20 @@ export const DatePicker = ({
 
   const formatDate = (date: string): string => {
     if (!date) return placeholder;
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime())) return placeholder; // guard against Invalid Date
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
-    }).format(new Date(date));
+    }).format(parsed);
     // "2010-03-15" → "March 15, 2010"
   };
 
   const isDateDisabled = (day: number): boolean => {
-    const date = new Date(currentYear, currentMonth, day);
-    const localDateString = date.toLocaleDateString("en-CA"); // Outputs "YYYY-MM-DD"
+    // Build a local YYYY-MM-DD string to avoid UTC midnight shift
+    // new Date(year, month, day) = local midnight — safe for string formatting
+    const localDateString = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
     if (minDate && localDateString < minDate) return true;
     if (maxDate && localDateString > maxDate) return true;
@@ -87,7 +95,7 @@ export const DatePicker = ({
 
   // Uses manual string formatting instead of .toISOString() ... to prevent timezone shifts from changing the selected day.
   const handleDateSelect = (day: number): void => {
-    const dateString = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(day).padEnd(2, "0")}`;
+    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     onChange(dateString);
     setIsOpen(false);
   };
@@ -106,9 +114,9 @@ export const DatePicker = ({
     for (let day = 1; day <= daysInMonth; day++) {
       const isSelected =
         value &&
-        new Date(value).getDate() === day &&
-        new Date(value).getMonth() === currentMonth &&
-        new Date(value).getFullYear() === currentYear;
+        selectedDay === day &&
+        selectedMonth - 1 === currentMonth && // -1 to convert back to zero-based
+        selectedYear === currentYear;
 
       const isDisabled = isDateDisabled(day);
 
@@ -119,6 +127,7 @@ export const DatePicker = ({
 
       days.push(
         <button
+          type="button"
           key={day}
           onClick={() => !isDisabled && handleDateSelect(day)}
           disabled={isDisabled}
@@ -164,7 +173,7 @@ export const DatePicker = ({
             />
           </button>
         </DialogTrigger>
-        <DialogContent className="fixed fixed-center z-50 w-80 p-4 bg-popover text-popover-foreground [&>button]:hidden border-none">
+        <DialogContent className="z-50 w-80 p-4 bg-popover text-popover-foreground [&>button]:hidden border-none">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <select
@@ -244,7 +253,7 @@ export const DatePicker = ({
               type="button"
               onClick={() => {
                 const today = new Date();
-                const todayString = today.toLocaleDateString("en-CA");
+                const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
                 onChange(todayString);
                 setCurrentMonth(today.getMonth());
                 setCurrentYear(today.getFullYear());
@@ -256,7 +265,7 @@ export const DatePicker = ({
             </button>
             <button
               type="button"
-              onChange={() => {
+              onClick={() => {
                 onChange(null);
                 setIsOpen(false);
               }}

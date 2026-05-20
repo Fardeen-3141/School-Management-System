@@ -329,7 +329,7 @@ export default function AdminFeesPageClient() {
     setSelectedFee(fee);
     setIsEditing(true);
     setIsDialogOpen(true);
-  };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

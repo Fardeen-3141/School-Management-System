@@ -98,12 +98,14 @@ export default function AdminPaymentsPageClient() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [dateFilter, setDateFilter] = React.useState("all");
 
+  const today = new Date();
+  const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const [formData, setFormData] = React.useState<PaymentFormData>({
     studentId: "",
     feeId: "",
     amount: "",
     discount: "",
-    date: new Date().toISOString().split("T")[0],
+    date: todayString,
   });
 
   const columns: ColumnDef<Payment>[] = [
@@ -273,7 +275,7 @@ export default function AdminPaymentsPageClient() {
       feeId: "",
       amount: "",
       discount: "0",
-      date: new Date().toISOString().split("T")[0],
+      date: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`,
     });
     setIsEditing(false);
   };
@@ -864,7 +866,7 @@ export default function AdminPaymentsPageClient() {
                     Cancel
                   </Button>
                   <Button
-                    type="submit"
+                    type="button"
                     onClick={handleSubmit}
                     disabled={
                       formLoading ||
