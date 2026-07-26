@@ -120,6 +120,7 @@ export default function AdminFeesPageClient() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
   const [typeFilter, setTypeFilter] = React.useState("all");
+  const [dialogClassFilter, setDialogClassFilter] = React.useState("all");
 
   const [formData, setFormData] = React.useState<FeeFormData>({
     type: "",
@@ -305,6 +306,7 @@ export default function AdminFeesPageClient() {
     });
     setIsEditing(false);
     setSelectedFee(null);
+    setDialogClassFilter("all");
   };
 
   const openCreateDialog = () => {
@@ -329,7 +331,7 @@ export default function AdminFeesPageClient() {
     setSelectedFee(fee);
     setIsEditing(true);
     setIsDialogOpen(true);
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -574,6 +576,11 @@ export default function AdminFeesPageClient() {
   const uniqueClasses = Array.from(
     new Set(students.map((s) => s.class)),
   ).sort();
+
+  const filteredDialogStudents = React.useMemo(() => {
+    if (dialogClassFilter === "all") return students;
+    return students.filter((s) => s.class === dialogClassFilter);
+  }, [students, dialogClassFilter]);
 
   const finalError = uiError || storeError;
 
@@ -1173,46 +1180,100 @@ export default function AdminFeesPageClient() {
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="studentId"
-                          className="flex items-center gap-2 text-sm font-medium"
-                        >
-                          Student *
-                        </Label>
-                        <Select
-                          value={formData.studentId}
-                          onValueChange={(value) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              studentId: value,
-                            }))
-                          }
-                          disabled={!!viewingStudent || formData.applyToClass}
-                        >
-                          <SelectTrigger className="h-11 cursor-pointer hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200">
-                            <SelectValue placeholder="Select student" />
-                          </SelectTrigger>
-                          <SelectContent className="border-none">
-                            {students.map((student) => (
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-2 flex-1">
+                          <Label
+                            htmlFor="dialogClassFilter"
+                            className="flex items-center gap-2 text-sm font-medium"
+                          >
+                            Class
+                          </Label>
+                          <Select
+                            value={dialogClassFilter}
+                            onValueChange={(value) => {
+                              setDialogClassFilter(value);
+                              if (formData.studentId) {
+                                const selectedStudent = students.find(
+                                  (s) => s.id === formData.studentId,
+                                );
+                                if (
+                                  selectedStudent &&
+                                  value !== "all" &&
+                                  selectedStudent.class !== value
+                                ) {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    studentId: "",
+                                  }));
+                                }
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-11 cursor-pointer hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200">
+                              <SelectValue placeholder="All Classes" />
+                            </SelectTrigger>
+                            <SelectContent className="border-none">
                               <SelectItem
-                                key={student.id}
-                                value={student.id}
-                                className="cursor-pointer py-3"
+                                value="all"
+                                className="cursor-pointer py-2"
                               >
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {student.name}
-                                  </span>
-                                  <span className="text-xs">
-                                    Roll: {student.rollNumber} • Class:{" "}
-                                    {student.class}-{student.section}
-                                  </span>
-                                </div>
+                                All Classes
                               </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                              {uniqueClasses.map((cls) => (
+                                <SelectItem
+                                  key={cls}
+                                  value={cls}
+                                  className="cursor-pointer py-2"
+                                >
+                                  {cls}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {/* Student Selector */}
+                        <div className="space-y-2 flex-1">
+                          <Label
+                            htmlFor="studentId"
+                            className="flex items-center gap-2 text-sm font-medium"
+                          >
+                            Student *
+                          </Label>
+                          <Select
+                            value={formData.studentId}
+                            onValueChange={(value) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                studentId: value,
+                                feeId: "",
+                              }))
+                            }
+                            disabled={!!viewingStudent}
+                          >
+                            <SelectTrigger className="h-11 cursor-pointer hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200">
+                              <SelectValue placeholder="Choose a student..." />
+                            </SelectTrigger>
+                            <SelectContent className="border-none">
+                              {filteredDialogStudents.map((student) => (
+                                <SelectItem
+                                  key={student.id}
+                                  value={student.id}
+                                  className="cursor-pointer py-3"
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {student.name}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      Roll: {student.rollNumber} • Class:{" "}
+                                      {student.class}-{student.section}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     )}
                   </div>
