@@ -28,6 +28,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -64,6 +65,14 @@ import {
 } from "@/components/ui/special/ResponsiveList";
 import { DatePicker } from "@/components/ui/special/DatePicker";
 import { useFeeStore, Fee, StudentFeeSetup } from "@/stores/useFeeStore";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 // This helper object will be useful for displaying human-readable labels
 const recurrenceLabel = {
@@ -121,6 +130,8 @@ export default function AdminFeesPageClient() {
   const [statusFilter, setStatusFilter] = React.useState("all");
   const [typeFilter, setTypeFilter] = React.useState("all");
   const [dialogClassFilter, setDialogClassFilter] = React.useState("all");
+  const [studentSearch, setStudentSearch] = React.useState("");
+  const [studentListOpen, setStudentListOpen] = React.useState(false);
 
   const [formData, setFormData] = React.useState<FeeFormData>({
     type: "",
@@ -307,6 +318,8 @@ export default function AdminFeesPageClient() {
     setIsEditing(false);
     setSelectedFee(null);
     setDialogClassFilter("all");
+    setStudentSearch("");
+    setStudentListOpen(false);
   };
 
   const openCreateDialog = () => {
@@ -314,6 +327,7 @@ export default function AdminFeesPageClient() {
     // If we're in the student view, pre-fill the student ID
     if (viewingStudent) {
       setFormData((prev) => ({ ...prev, studentId: viewingStudent.id }));
+      setStudentSearch(viewingStudent.name);
     }
     setIsDialogOpen(true);
   };
@@ -970,20 +984,26 @@ export default function AdminFeesPageClient() {
 
         {/* Add/Edit Fee Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-xl max-h-[90vh] bg-popover text-popover-foreground overflow-hidden flex flex-col p-0 [&>button]:hidden border-none">
+          <DialogContent className="max-w-2xl max-h-[90vh] bg-popover text-popover-foreground overflow-hidden flex flex-col p-0 [&>button]:hidden border-none rounded-2xl shadow-2xl">
             {/* Fixed Header */}
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <DialogHeader className="space-y-0">
-                <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+              <DialogHeader className="space-y-1">
+                <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
                   <CreditCard className="h-5 w-5" />
-                  {isEditing ? "Edit Fee" : "Create New Fee"}
+                  {isEditing ? "Edit Fee" : "Create Fee"}
                 </DialogTitle>
+
+                <DialogDescription>
+                  {isEditing
+                    ? "Update the fee information."
+                    : "Assign a fee to an individual student or an entire class."}
+                </DialogDescription>
               </DialogHeader>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsDialogOpen(false)}
-                className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground"
+                className="h-9 w-9 rounded-full p-0 hover:bg-muted transition-colors"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -1001,7 +1021,7 @@ export default function AdminFeesPageClient() {
                 </Alert>
               )}
 
-              <div className="space-y-6 pb-6">
+              <div className="space-y-8 pb-8">
                 {/* Fee Type */}
                 <div className="space-y-2">
                   <Label
@@ -1022,55 +1042,57 @@ export default function AdminFeesPageClient() {
                   />
                 </div>
 
-                {/* Amount */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="amount"
-                    className="flex items-center gap-2 text-sm font-medium"
-                  >
-                    Amount *
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                      ₹
-                    </span>
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.amount}
-                      onChange={(e) =>
+                <div className="flex items-center justify-between gap-2">
+                  {/* Amount */}
+                  <div className="space-y-2 flex-1">
+                    <Label
+                      htmlFor="amount"
+                      className="flex items-center gap-2 text-sm font-medium"
+                    >
+                      Amount *
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                        ₹
+                      </span>
+                      <Input
+                        id="amount"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.amount}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            amount: e.target.value,
+                          }))
+                        }
+                        placeholder="0.00"
+                        className="h-11 pl-8 text-right"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Due Date */}
+                  <div className="space-y-2 flex-1">
+                    <Label
+                      htmlFor="amount"
+                      className="flex items-center gap-2 text-sm font-medium"
+                    >
+                      Due Date
+                    </Label>
+                    <DatePicker
+                      value={formData.dueDate}
+                      onChange={(date) =>
                         setFormData((prev) => ({
                           ...prev,
-                          amount: e.target.value,
+                          dueDate: date || "",
                         }))
                       }
-                      placeholder="0.00"
-                      className="h-11 pl-8 text-right"
-                      required
+                      placeholder="Select due date"
                     />
                   </div>
-                </div>
-
-                {/* Due Date */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="amount"
-                    className="flex items-center gap-2 text-sm font-medium"
-                  >
-                    Due Date
-                  </Label>
-                  <DatePicker
-                    value={formData.dueDate}
-                    onChange={(date) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        dueDate: date || "",
-                      }))
-                    }
-                    placeholder="Select due date"
-                  />
                 </div>
 
                 {!isEditing && (
@@ -1097,7 +1119,7 @@ export default function AdminFeesPageClient() {
                           Apply to entire class
                         </Label>
                       </div>
-                      <p className="text-xs text-gray-500 mt-2 ml-7">
+                      <p className="text-sm text-muted-foreground mt-2 ml-7">
                         Check this to apply the fee to all students in a
                         specific class/section
                       </p>
@@ -1204,7 +1226,10 @@ export default function AdminFeesPageClient() {
                                   setFormData((prev) => ({
                                     ...prev,
                                     studentId: "",
+                                    feeId: "",
+                                    amount: "",
                                   }));
+                                  setStudentSearch("");
                                 }
                               }
                             }}
@@ -1231,48 +1256,77 @@ export default function AdminFeesPageClient() {
                             </SelectContent>
                           </Select>
                         </div>
-                        {/* Student Selector */}
-                        <div className="space-y-2 flex-1">
+
+                        {/* Student Selector Search*/}
+                        <div className="space-y-2 flex-1 relative">
                           <Label
                             htmlFor="studentId"
                             className="flex items-center gap-2 text-sm font-medium"
                           >
                             Student *
                           </Label>
-                          <Select
-                            value={formData.studentId}
-                            onValueChange={(value) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                studentId: value,
-                                feeId: "",
-                              }))
-                            }
-                            disabled={!!viewingStudent}
-                          >
-                            <SelectTrigger className="h-11 cursor-pointer hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200">
-                              <SelectValue placeholder="Choose a student..." />
-                            </SelectTrigger>
-                            <SelectContent className="border-none">
-                              {filteredDialogStudents.map((student) => (
-                                <SelectItem
-                                  key={student.id}
-                                  value={student.id}
-                                  className="cursor-pointer py-3"
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">
-                                      {student.name}
-                                    </span>
-                                    <span className="text-xs text-gray-500">
-                                      Roll: {student.rollNumber} • Class:{" "}
-                                      {student.class}-{student.section}
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+
+                          <Command className="overflow-visible border border-border">
+                            <CommandInput
+                              placeholder="Search by name or roll no..."
+                              value={studentSearch}
+                              onValueChange={(value) => {
+                                setStudentSearch(value);
+                                setStudentListOpen(true);
+                                // If they edit the text after picking someone, treat it as deselecting
+                                if (formData.studentId) {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    studentId: "",
+                                    feeId: "",
+                                  }));
+                                }
+                              }}
+                              onFocus={() => setStudentListOpen(true)}
+                              onBlur={() => {
+                                // Delay so a click on CommandItem can register before we close
+                                setTimeout(
+                                  () => setStudentListOpen(false),
+                                  150,
+                                );
+                              }}
+                              disabled={!!viewingStudent}
+                              className="h-11"
+                            />
+                            {studentListOpen && (
+                              <CommandList className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-md shadow-md max-h-64 overflow-y-auto">
+                                <CommandEmpty>No students found.</CommandEmpty>
+                                <CommandGroup>
+                                  {filteredDialogStudents.map((student) => (
+                                    <CommandItem
+                                      key={student.id}
+                                      value={`${student.name} ${student.rollNumber}`}
+                                      onSelect={() => {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          studentId: student.id,
+                                          feeId: "",
+                                        }));
+                                        setStudentSearch(student.name);
+                                        setStudentListOpen(false);
+                                      }}
+                                      className="cursor-pointer"
+                                    >
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">
+                                          {student.name}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          Roll: {student.rollNumber} • Class:{" "}
+                                          {student.class}-{student.section}
+                                        </span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            )}
+                          </Command>
                         </div>
                       </div>
                     )}
@@ -1301,7 +1355,7 @@ export default function AdminFeesPageClient() {
             </div>
 
             {/* Fixed Footer */}
-            <div className="border-t border-border p-4">
+            <div className="border-t bg-muted/20 p-5">
               <div className="flex flex-col-reverse justify-between sm:flex-row sm:justify-between gap-3">
                 <Button
                   type="button"

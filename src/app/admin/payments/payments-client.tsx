@@ -22,6 +22,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import {
   Trash2,
@@ -98,6 +106,8 @@ export default function AdminPaymentsPageClient() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [dateFilter, setDateFilter] = React.useState("all");
   const [dialogClassFilter, setDialogClassFilter] = React.useState("all");
+  const [studentSearch, setStudentSearch] = React.useState("");
+  const [studentListOpen, setStudentListOpen] = React.useState(false);
 
   const today = new Date();
   const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -289,6 +299,8 @@ export default function AdminPaymentsPageClient() {
     });
     setIsEditing(false);
     setDialogClassFilter("all");
+    setStudentSearch("");
+    setStudentListOpen(false);
   };
 
   const openCreateDialog = () => {
@@ -300,6 +312,7 @@ export default function AdminPaymentsPageClient() {
         ...prev,
         studentId: viewingStudent.id,
       }));
+      setStudentSearch(viewingStudent.name);
     }
 
     setIsDialogOpen(true);
@@ -726,48 +739,62 @@ export default function AdminPaymentsPageClient() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {/* Student Selection */}
-                    <div className="space-y-2 flex-1">
+
+                    <div className="space-y-2 flex-1 relative">
                       <Label
                         htmlFor="studentId"
                         className="flex items-center gap-2 text-sm font-medium"
                       >
                         Student *
                       </Label>
-                      <Select
-                        value={formData.studentId}
-                        onValueChange={(value) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            studentId: value,
-                            feeId: "",
-                          }))
-                        }
-                        disabled={!!viewingStudent}
-                      >
-                        <SelectTrigger className="h-11 cursor-pointer hover:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200">
-                          <SelectValue placeholder="Choose a student..." />
-                        </SelectTrigger>
-                        <SelectContent className="border-none">
-                          {filteredStudents.map((student) => (
-                            <SelectItem
-                              key={student.id}
-                              value={student.id}
-                              className="cursor-pointer py-3"
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-medium">
-                                  {student.name}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Roll: {student.rollNumber} • Class:{" "}
-                                  {student.class}-{student.section}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+
+                      <Command className="overflow-visible border border-border">
+                        <CommandInput
+                          placeholder="Search by name or roll no..."
+                          value={studentSearch}
+                          onValueChange={setStudentSearch}
+                          onFocus={() => setStudentListOpen(true)}
+                          onBlur={() => {
+                            // Delay so a click on CommandItem can register before we close
+                            setTimeout(() => setStudentListOpen(false), 150);
+                          }}
+                          disabled={!!viewingStudent}
+                          className="h-11"
+                        />
+                        {studentListOpen && (
+                          <CommandList className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-md shadow-md">
+                            <CommandEmpty>No students found.</CommandEmpty>
+                            <CommandGroup>
+                              {filteredStudents.map((student) => (
+                                <CommandItem
+                                  key={student.id}
+                                  value={`${student.name} ${student.rollNumber}`}
+                                  onSelect={() => {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      studentId: student.id,
+                                      feeId: "",
+                                    }));
+                                    setStudentSearch(student.name);
+                                    setStudentListOpen(false);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {student.name}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      Roll: {student.rollNumber} • Class:{" "}
+                                      {student.class}-{student.section}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        )}
+                      </Command>
                     </div>
                   </div>
 
